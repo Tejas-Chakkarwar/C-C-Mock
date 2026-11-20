@@ -51,16 +51,27 @@ def _redact(value: Any, key: str | None = None) -> Any:
 class Database:
     def __init__(self, settings: Settings, query_log: QueryLog | None = None) -> None:
         self.query_log = query_log or QueryLog()
+        driver = None
+        verified = False
         try:
-            self.driver = GraphDatabase.driver(
+            driver = GraphDatabase.driver(
                 settings.uri,
                 auth=(settings.user, settings.password),
             )
-            self.driver.verify_connectivity()
+            driver.verify_connectivity()
+            verified = True
         except AuthError as exc:
             raise DatabaseUnavailableError("Neo4j authentication failed") from exc
         except (ServiceUnavailable, OSError) as exc:
             raise DatabaseUnavailableError("Neo4j is unavailable") from exc
+        finally:
+            if driver is not None and not verified:
+                try:
+                    driver.close()
+                except Exception:
+                    # Preserve the actionable connection error if cleanup fails.
+                    pass
+        self.driver = driver
 
     def close(self) -> None:
         self.driver.close()
