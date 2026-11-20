@@ -211,10 +211,10 @@ def load(processed_dir: Path, batch_size: int = 1000, *, reset: bool = False) ->
         rows, _ = db.read("COUNT_ALL_NODES", COUNT_ALL_NODES)
         if rows[0]["nodes"] and not reset:
             raise SystemExit("Database isn't empty. Use make reset for a clean reload.")
-        if reset:
-            db.write("RESET_DATABASE", RESET_DATABASE, log=False)
         validate_processed_manifest(processed_dir, log)
         loaded = validate_rows(processed_dir, log, datasets)
+        if reset:
+            db.write("RESET_DATABASE", RESET_DATABASE, log=False)
         load_started = True
         for name, query in SCHEMA:
             db.write(name, query, log=False)

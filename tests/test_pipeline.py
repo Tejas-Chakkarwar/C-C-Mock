@@ -297,3 +297,40 @@ def test_reset_mode_clears_nonempty_database_before_loading(
     names = [name for name, _params in FakeDatabase.instance.calls]
     assert names[:2] == ["COUNT_ALL_NODES", "RESET_DATABASE"]
     assert "FINALIZE_LOAD" in names
+
+
+def test_reset_mode_validates_processed_data_before_deleting(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    processed, _log = _write_processed_fixture(tmp_path)
+
+    class FakeDatabase:
+        instance = None
+
+        def __init__(self, _settings):
+            self.calls = []
+            FakeDatabase.instance = self
+
+        def read(self, name, _query, **_params):
+            self.calls.append(name)
+            return ([{"nodes": 2}], None)
+
+        def write(self, name, _query, **_params):
+            self.calls.append(name)
+            return ([], None)
+
+        def close(self):
+            pass
+
+    monkeypatch.setattr(load_data, "Database", FakeDatabase)
+    monkeypatch.setattr(load_data, "load_settings", lambda: object())
+
+    def fail_manifest(*_args):
+        raise ValueError("invalid processed data")
+
+    monkeypatch.setattr(load_data, "validate_processed_manifest", fail_manifest)
+
+    with pytest.raises(ValueError, match="invalid processed data"):
+        load_data.load(processed, reset=True)
+
+    assert FakeDatabase.instance.calls == ["COUNT_ALL_NODES"]

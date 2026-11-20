@@ -41,9 +41,11 @@ def load_settings() -> Settings:
     if parsed_uri.hostname is None:
         raise ValueError("NEO4J_URI must include a host")
     try:
-        parsed_uri.port
+        port = parsed_uri.port
     except ValueError as exc:
         raise ValueError(f"invalid NEO4J_URI port: {exc}") from exc
+    if port == 0:
+        raise ValueError("NEO4J_URI port must be greater than zero")
     if parsed_uri.hostname not in {"localhost", "127.0.0.1", "::1"}:
         raise ValueError("NEO4J_URI must point to localhost for this local project")
     return Settings(
