@@ -19,3 +19,19 @@ def test_vertical_slice_against_local_neo4j() -> None:
         "Run `make up` and retry.\n"
         f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
     )
+
+
+@pytest.mark.integration
+def test_milestone_one_smoke_query_is_logged() -> None:
+    result = subprocess.run(
+        [sys.executable, "scripts/smoke_check.py"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, (
+        "Milestone 1 smoke check failed. Run `make up` and retry.\n"
+        f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+    )
+    assert "smoke query returned 1" in result.stdout
+    assert "QueryLog recorded SMOKE_RETURN_ONE" in result.stdout

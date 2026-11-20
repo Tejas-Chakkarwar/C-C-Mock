@@ -1,4 +1,6 @@
-"""All Cypher used by the Milestone 0 vertical slice."""
+"""All Cypher used by the Cypher Circle application."""
+
+SMOKE_RETURN_ONE = "RETURN 1 AS value"
 
 COUNT_ALL_NODES = """
 MATCH (n)

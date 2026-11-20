@@ -1011,6 +1011,7 @@ NEO4J_PASSWORD=cyphercircle-dev
 | `make reset` | wipe the database, then load fresh |
 | `make run` | `python -m cyphercircle` |
 | `make verify-env` | verify the Python version, pinned imports, Faker determinism, and seeded bcrypt hash |
+| `make smoke-check` | execute `RETURN 1` through `Database.read()` and verify the call appears in `QueryLog` |
 | `make test` | run unit tests with the integration marker excluded; does not silently claim database coverage |
 | `make test-integration` | run only integration tests with a strict `--run-integration` option and fail if Neo4j is unavailable |
 | `make report` | `report/build_report.sh` |

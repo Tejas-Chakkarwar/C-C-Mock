@@ -25,6 +25,7 @@ bound to localhost only:
 ```sh
 make up
 make verify-env
+make smoke-check
 make test
 make data
 make load
@@ -40,6 +41,11 @@ when intentionally running a compatible toolchain, for example
 extracts it under `data/raw/twitter/`, and writes deterministic CSV output to
 `data/processed/`. Raw and processed data, credentials, and the local virtual
 environment are gitignored.
+
+`make smoke-check` loads the local Neo4j settings, executes `RETURN 1` through
+`Database.read()`, and confirms that the query was recorded in `QueryLog`.
+Missing or invalid `NEO4J_*` settings fail with an actionable configuration
+message.
 
 The accepted SNAP archive SHA-256 is
 `5ed7b52a8013a1a1d43301a5414dfcb844e50cb4e2fb8dc801a7bef399552bb0`.

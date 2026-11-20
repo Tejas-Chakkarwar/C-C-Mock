@@ -1,6 +1,6 @@
 PYTHON ?= .venv/bin/python
 
-.PHONY: up down data load verify-env test test-integration slice-check
+.PHONY: up down data load verify-env smoke-check test test-integration slice-check
 
 up:
 	@if [ ! -f .env ]; then cp .env.example .env && chmod 600 .env; fi
@@ -18,6 +18,9 @@ load:
 
 verify-env:
 	$(PYTHON) scripts/verify_env.py
+
+smoke-check:
+	$(PYTHON) scripts/smoke_check.py
 
 test:
 	$(PYTHON) -m pytest -m "not integration"
