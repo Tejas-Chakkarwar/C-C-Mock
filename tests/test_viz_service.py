@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import webbrowser
 from pathlib import Path
 from typing import Any
 
@@ -99,6 +100,34 @@ def test_empty_network_skips_html_and_browser(tmp_path: Path) -> None:
     assert [entry.name for entry in db.query_log.entries()] == ["GET_EGO_NETWORK"]
 
 
+def test_empty_network_removes_only_current_stale_output(tmp_path: Path) -> None:
+    stale_path = tmp_path / "network_alice.a.html"
+    unrelated_path = tmp_path / "network_other.user.html"
+    stale_path.write_text("stale", encoding="utf-8")
+    unrelated_path.write_text("keep", encoding="utf-8")
+    db = FakeDB(
+        ego={"center": "alice.a", "center_name": "Alice", "following": [], "followers": []}
+    )
+    service = VisualizationService(db, output_dir=tmp_path)
+
+    assert service.generate(Session("alice.a", "Alice")) is None
+    assert not stale_path.exists()
+    assert unrelated_path.read_text(encoding="utf-8") == "keep"
+
+
+def test_empty_network_ignores_invalid_output_directory(tmp_path: Path) -> None:
+    output_file = tmp_path / "not-a-directory"
+    output_file.write_text("occupied", encoding="utf-8")
+    db = FakeDB(
+        ego={"center": "alice.a", "center_name": "Alice", "following": [], "followers": []}
+    )
+
+    assert VisualizationService(db, output_dir=output_file).generate(
+        Session("alice.a", "Alice")
+    ) is None
+    assert output_file.read_text(encoding="utf-8") == "occupied"
+
+
 def test_generate_creates_offline_direct_html_with_legend_and_browser_open(tmp_path: Path) -> None:
     opened: list[str] = []
     service = VisualizationService(
@@ -153,6 +182,20 @@ def test_generate_reports_browser_open_failure(tmp_path: Path) -> None:
 
     with pytest.raises(VisualizationError, match="browser could not be opened"):
         service.generate(Session("alice.a", "Alice"))
+    assert (tmp_path / "network_alice.a.html").exists()
+
+
+def test_generate_reports_webbrowser_error_and_preserves_html(tmp_path: Path) -> None:
+    def fail_browser(_url: str) -> bool:
+        raise webbrowser.Error("browser backend failed")
+
+    service = VisualizationService(FakeDB(), output_dir=tmp_path, browser_open=fail_browser)
+
+    with pytest.raises(VisualizationError, match="browser could not be opened") as error:
+        service.generate(Session("alice.a", "Alice"))
+
+    assert "browser backend failed" not in str(error.value)
+    assert (tmp_path / "network_alice.a.html").exists()
 
 
 def test_generated_display_fields_are_html_and_terminal_safe(tmp_path: Path) -> None:

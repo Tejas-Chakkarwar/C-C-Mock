@@ -10,7 +10,11 @@ from rich.console import Console
 from cyphercircle import cli as cli_module
 from cyphercircle.cli import CLI
 from cyphercircle.db import LoggedQuery, QueryLog
-from cyphercircle.errors import AuthenticationError, DatabaseUnavailableError
+from cyphercircle.errors import (
+    AuthenticationError,
+    DatabaseUnavailableError,
+    VisualizationError,
+)
 from cyphercircle.models import (
     Connection,
     ConnectionCounts,
@@ -139,6 +143,24 @@ class FakeVisualization:
         self.query_log.record(LoggedQuery("GET_EGO_NETWORK", "RETURN 1", {}, 1))
         self.query_log.record(LoggedQuery("GET_EDGES_AMONG", "RETURN 1", {}, 2))
         return Path("output/network_alice.a.html")
+
+
+class EmptyVisualization:
+    def generate(self, _session: Session) -> None:
+        return None
+
+
+class BrowserFailureVisualization:
+    def __init__(self, query_log: QueryLog) -> None:
+        self.query_log = query_log
+
+    def generate(self, _session: Session) -> Path:
+        self.query_log.record(LoggedQuery("GET_EGO_NETWORK", "RETURN 1", {}, 1))
+        self.query_log.record(LoggedQuery("GET_EDGES_AMONG", "RETURN 1", {}, 2))
+        raise VisualizationError(
+            "The network was written to output/network_alice.a.html, "
+            "but the browser could not be opened."
+        )
 
 
 def _cli(
@@ -364,3 +386,43 @@ def test_visualization_action_shows_all_queries_and_output_path() -> None:
     assert "GET_EGO_NETWORK" in rendered
     assert "GET_EDGES_AMONG" in rendered
     assert "output/network_alice.a.html" in rendered
+
+
+def test_empty_visualization_action_shows_no_network_message() -> None:
+    cli, _graph, output = _cli(
+        input_values=["1", "alice.a", "v", "0", "0"],
+        password_values=["password"],
+        visualization=EmptyVisualization(),
+    )
+
+    assert cli.run() == 0
+    rendered = output.getvalue()
+    assert "No network yet. Follow someone first." in rendered
+    assert "Traceback" not in rendered
+
+
+def test_visualization_browser_failure_is_friendly_and_shows_all_queries() -> None:
+    console, output = _console()
+    query_log = QueryLog()
+    visualization = BrowserFailureVisualization(query_log)
+    cli = CLI(
+        FakeAuth(),
+        FakeProfile(query_log),
+        FakeGraph(query_log),
+        FakeSearch(),
+        query_log,
+        console=console,
+        input_func=_feeder(["1", "alice.a", "c", "v", "0", "0"]),
+        password_func=_feeder(["password"]),
+        visualization=visualization,
+    )
+
+    assert cli.run() == 0
+    rendered = output.getvalue()
+    assert "browser could" in rendered
+    assert "not be opened" in rendered
+    assert "GET_EGO_NETWORK" in rendered
+    assert "GET_EDGES_AMONG" in rendered
+    assert "Traceback" not in rendered
+    assert "password_hash" not in rendered
+    assert "cypher123" not in rendered

@@ -127,9 +127,11 @@ class VisualizationService:
         """Write the offline visualization and open it in the configured browser."""
 
         network = self.get_network(session)
-        if not network.has_connections:
-            return None
         username = principal_username(session)
+        path = self._output_path(username)
+        if not network.has_connections:
+            self._remove_stale_output(path)
+            return None
         try:
             network_class = self._load_network_class()
         except (ImportError, ModuleNotFoundError) as exc:
@@ -138,7 +140,6 @@ class VisualizationService:
                 "Install the pinned requirements with `pip install -r requirements.txt`."
             ) from exc
 
-        path = self.output_dir / f"network_{username}.html"
         try:
             self.output_dir.mkdir(parents=True, exist_ok=True)
             graph = network_class(
@@ -176,11 +177,23 @@ class VisualizationService:
                 raise VisualizationError(
                     f"The network was written to {path}, but the browser could not be opened."
                 )
-        except OSError as exc:
+        except (OSError, webbrowser.Error) as exc:
             raise VisualizationError(
                 f"The network was written to {path}, but the browser could not be opened."
             ) from exc
         return path
+
+    def _output_path(self, username: str) -> Path:
+        return self.output_dir / f"network_{username}.html"
+
+    @staticmethod
+    def _remove_stale_output(path: Path) -> None:
+        try:
+            path.unlink(missing_ok=True)
+        except OSError:
+            # Empty-network handling should remain harmless when output_dir is
+            # absent, not a directory, or otherwise unavailable.
+            return
 
     @staticmethod
     def _load_network_class() -> Any:
