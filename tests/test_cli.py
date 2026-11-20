@@ -237,6 +237,23 @@ def test_recommendation_selection_starts_follow_action_log() -> None:
     assert cli.query_log.action == "UC-5"
 
 
+@pytest.mark.parametrize(
+    ("method", "input_value", "title"),
+    [
+        ("_follow", "bob.b", "UC-5 · Follow a user"),
+        ("_unfollow", "bob.b", "UC-6 · Unfollow a user"),
+        ("_connections", "b", "UC-7 · Connections"),
+    ],
+)
+def test_social_graph_actions_have_uc_titles(
+    method: str, input_value: str, title: str
+) -> None:
+    cli, _graph, output = _cli(input_values=[input_value])
+    cli.session = Session("alice.a", "Alice")
+    getattr(cli, method)()
+    assert title in output.getvalue()
+
+
 def test_edit_profile_shows_one_query_panel_per_subaction() -> None:
     cli, _graph, output = _cli(
         input_values=["1", "alice.a", "c", "2", "1", "New Name", "", "", "0", "0", "0"],

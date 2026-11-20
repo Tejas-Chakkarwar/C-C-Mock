@@ -290,6 +290,9 @@ class CLI:
 
     def _follow(self) -> None:
         session = self._require_session()
+        self.console.print(
+            Panel("Follow another user", title="UC-5 · Follow a user", border_style="cyan")
+        )
         target = self._ask("Username to follow").strip()
         self.graph.follow(session, target)
         self.console.print(
@@ -298,12 +301,26 @@ class CLI:
 
     def _unfollow(self) -> None:
         session = self._require_session()
+        self.console.print(
+            Panel(
+                "Stop following another user",
+                title="UC-6 · Unfollow a user",
+                border_style="cyan",
+            )
+        )
         target = self._ask("Username to unfollow").strip()
         self.graph.unfollow(session, target)
         self.console.print(f"[green]You unfollowed @{escape_markup(target.lower())}.[/green]")
 
     def _connections(self) -> None:
         session = self._require_session()
+        self.console.print(
+            Panel(
+                "Following and followers are shown separately.",
+                title="UC-7 · Connections",
+                border_style="cyan",
+            )
+        )
         page = 0
         page_size = 15
         while True:

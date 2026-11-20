@@ -2,7 +2,7 @@
 
 **Course:** SJSU CS157C NoSQL Database Systems, Team Project
 **Stack:** Python 3.13.x console application with a browser-based generated network visualization, Neo4j 5.26.0 (Community), SNAP `ego-Twitter` dataset (subset)
-**Status:** Design reviewed, ready for implementation
+**Status:** Milestones 0–4 implemented; Milestones 5–6 pending
 
 **Changes from v1:** dataset switched from `email-Eu-core` to `ego-Twitter` (real follow edges). `Department` replaced by `Circle`. Visualization promoted from bonus to required-until-confirmed. Fixed: duplicate-registration check, UC-8 totals, multi-query Show Cypher logging, username generation, timestamp format, `source_id` uniqueness, circle removal, loader idempotency, reproducible report build, 3-person team split.
 
@@ -1164,7 +1164,7 @@ download → preprocess → load Neo4j → register/login → follow → recomme
 ```
 
 - Bare-minimum versions of `download_dataset.py`, `preprocess.py`, `load_data.py`, `db.py`, and just the queries this path needs.
-- A throwaway script `scripts/slice_check.py` (deleted after Milestone 4) that registers a test user, logs in, follows `busy_user`, and prints recommendations.
+- A repeatable script `scripts/slice_check.py` that registers a test user, logs in, follows `busy_user`, and prints recommendations. It remains available as an integration smoke check until later acceptance tooling replaces it.
 - No CLI, no Show Cypher, no visualization yet.
 
 **Accept when:** the slice runs against a fresh Neo4j container, the loaded counts clear both thresholds, `demo_users.busy_user` has at least one network-based recommendation, and the test user gets at least one network-based recommendation. Then build out the full milestones below, replacing the slice code as you go.
@@ -1203,7 +1203,7 @@ docker-compose, `.env.example`, pinned `requirements.txt`, Makefile, `config.py`
 
 ### Milestone 4: CLI
 `cli.py`, `__main__.py`, pagination, Show Cypher panels, pick-a-number flows.
-**Accept when:** the demo script (Section 15) runs start to finish with no tracebacks, and Show Cypher shows multiple panels for UC-9.
+**Accept when:** the Milestone 4 portion of the demo script (Section 15, UC-1 through UC-11) runs start to finish with no tracebacks, and Show Cypher shows multiple panels for UC-9. UC-12 remains a Milestone 5 placeholder until visualization is implemented.
 
 ### Milestone 5: Visualization
 `viz_service.py`.
@@ -1250,7 +1250,7 @@ Run `make demo-info` first to get the exact usernames and search term. Then run 
 | 9 | Recommendations for `busy_user` (network tier) | uc09 |
 | 10 | Search the `demo_search_term` from `preprocess_log.json` | uc10 |
 | 11 | Popular users | uc11 |
-| 12 | View my network, plus a browser screenshot | uc12 |
+| 12 | View my network, plus a browser screenshot (Milestone 5) | uc12 |
 | extra | Back as `demo.user`, after unfollowing everyone: recommendations show circle and popular fallbacks with all queries in Show Cypher | uc09b |
 
 ---
