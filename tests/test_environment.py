@@ -25,6 +25,7 @@ def test_missing_neo4j_settings_are_actionable(monkeypatch: pytest.MonkeyPatch) 
         ("http://localhost:7687", "Bolt/neo4j URI scheme"),
         ("bolt://example.com:7687", "localhost"),
         ("bolt://", "include a host"),
+        ("bolt://localhost:notaport", "invalid NEO4J_URI port"),
     ],
 )
 def test_invalid_neo4j_uri_is_rejected(

@@ -1,7 +1,7 @@
 # Cypher Circle
 
-Cypher Circle is a Python 3.13 console application backed by Neo4j. The
-repository is currently at Milestone 0, the vertical slice defined in
+Cypher Circle is a Python 3.13 console application backed by Neo4j. Milestones
+0 and 1 are complete: the vertical slice and environment workflow defined in
 `DESIGN.md`: SNAP ego-Twitter data is downloaded and deterministically
 preprocessed, loaded into Neo4j, and exercised through registration, login,
 follow, and network recommendation checks.
