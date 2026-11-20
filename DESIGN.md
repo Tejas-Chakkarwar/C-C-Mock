@@ -2,7 +2,7 @@
 
 **Course:** SJSU CS157C NoSQL Database Systems, Team Project
 **Stack:** Python 3.13.x console application with a browser-based generated network visualization, Neo4j 5.26.0 (Community), SNAP `ego-Twitter` dataset (subset)
-**Status:** Milestones 0–5 implemented; Milestone 6 pending
+**Status:** Milestones 0–6 implemented; final submission evidence remains team-supplied
 
 **Changes from v1:** dataset switched from `email-Eu-core` to `ego-Twitter` (real follow edges). `Department` replaced by `Circle`. Visualization promoted from bonus to required-until-confirmed. Fixed: duplicate-registration check, UC-8 totals, multi-query Show Cypher logging, username generation, timestamp format, `source_id` uniqueness, circle removal, loader idempotency, reproducible report build, 3-person team split.
 
@@ -967,12 +967,21 @@ pytest==9.2.0
 | `python-dotenv` | `.env` loading | |
 | `pyvis` | UC-12 | |
 | `pytest` | tests | |
+| `reportlab` | local report PDF rendering | |
+| `Pillow` | local report diagram generation and PDF page checks | |
+| `charset-normalizer` | pinned ReportLab dependency | |
 
 Milestone 1 must verify this set in a clean Python **3.13** virtual environment, including imports, the seeded bcrypt hash, and a short Faker determinism check. The seeded password hash in 4.4 must verify with `checkpw` using encoded bytes.
 
 Python **3.13.x** is required. Neo4j **5.26.0** (pinned) required (queries use `COUNT { }`, `EXISTS { }`, and `CALL { }` subqueries).
 
-**Report tooling (system, required for packaging):** `pandoc` and a LaTeX engine are required for `make report` and `make zip`. Install notes go in the README (`brew install pandoc basictex` on macOS, `sudo apt install pandoc texlive-xetex` on Ubuntu). Mermaid diagrams are **pre-rendered to PNG and committed** in `report/diagrams/`, so no one needs `mmdc`. If the tools are unavailable, the README may describe manual PDF export, but `make zip` must fail clearly rather than producing a submission archive without `report.pdf`.
+**Report tooling (local, required for packaging):** the project-local environment
+uses ReportLab and Pillow to build the PDF and diagrams. Poppler's `pdfinfo`,
+`pdftotext`, and `pdftoppm` are required by the report verifier. The build uses
+no network assets and fails clearly when the preprocessing log, PDF tools, or
+referenced diagrams are unavailable. Diagrams are rendered to PNG under
+`report/diagrams/`; screenshots under `report/screenshots/` remain team-supplied
+evidence.
 
 ---
 
@@ -1219,6 +1228,7 @@ strict integration checks pass when Neo4j is available.
 - `report/report.md` filled per Section 16, with real numbers from `preprocess_log.json` and `VERIFY_COUNTS`.
 - Pre-rendered diagram PNGs in `report/diagrams/`.
 - `build_report.sh` and `make zip`.
+- The report builder records placeholders for missing team identities or screenshots and never invents unavailable live Neo4j counts.
 
 **Accept when:** `make report` produces a verified `report.pdf`, and `make zip` produces `projects.zip` with that PDF and a `source/` folder (code, scripts, tests, README, requirements, docker-compose, Makefile). The packaging script must fail if the PDF is absent and must **exclude** `data/raw`, `data/processed`, `.env`, `output/`, `__pycache__`, `.venv`, temporary extraction directories, and local credentials.
 

@@ -8,6 +8,8 @@ import neo4j
 import pytest
 import rich
 import dotenv
+import reportlab
+from PIL import Image
 from faker import Faker
 from pyvis.network import Network
 
@@ -25,6 +27,9 @@ EXPECTED = {
     "python-dotenv": "1.2.4",
     "pyvis": "0.3.2",
     "pytest": "9.2.0",
+    "reportlab": "4.4.5",
+    "Pillow": "11.3.0",
+    "charset-normalizer": "3.5.2",
 }
 
 
@@ -36,7 +41,7 @@ def main() -> int:
         if actual != expected:
             raise SystemExit(f"{package}=={expected} required; found {actual}")
     # Import each declared runtime/test dependency as well as checking metadata.
-    _ = (neo4j, pytest, rich, dotenv, Network)
+    _ = (neo4j, pytest, rich, dotenv, Network, reportlab, Image)
     if not bcrypt.checkpw(SEEDED_PASSWORD.encode("utf-8"), SEEDED_PASSWORD_HASH.encode("ascii")):
         raise SystemExit("seeded bcrypt hash does not verify")
     Faker.seed(SEED)

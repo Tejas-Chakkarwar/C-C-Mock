@@ -1,6 +1,6 @@
 PYTHON ?= .venv/bin/python
 
-.PHONY: up down data load reset run verify-env smoke-check test test-integration slice-check
+.PHONY: up down data load reset run verify-env smoke-check test test-integration slice-check report zip demo-info
 
 up:
 	@if [ ! -f .env ]; then cp .env.example .env && chmod 600 .env; fi
@@ -36,4 +36,13 @@ test-integration:
 
 slice-check:
 	$(PYTHON) scripts/slice_check.py
+
+report:
+	./build_report.sh
+
+zip: report
+	$(PYTHON) scripts/package_project.py
+
+demo-info:
+	$(PYTHON) scripts/demo_info.py
 

@@ -1,12 +1,12 @@
 # Cypher Circle
 
 Cypher Circle is a Python 3.13 console application backed by Neo4j. Milestones
-0 through 5 are implemented: the vertical slice, environment workflow,
+0 through 6 are implemented: the vertical slice, environment workflow,
 deterministic SNAP ego-Twitter data pipeline, service layer, Rich console
-interface, and offline network visualization defined in `DESIGN.md` are
-acceptance-checked. The loaded graph is exercised through registration, login,
-profile editing, circles, connections, search, recommendations, and directed
-network visualization.
+interface, offline network visualization, and reproducible report/package
+tooling defined in `DESIGN.md` are implemented. The loaded graph is exercised
+through registration, login, profile editing, circles, connections, search,
+recommendations, and directed network visualization.
 
 ## Local setup
 
@@ -54,6 +54,28 @@ environment are gitignored.
 `Database.read()`, and confirms that the query was recorded in `QueryLog`.
 Missing or invalid `NEO4J_*` settings fail with an actionable configuration
 message.
+
+Milestone 6 report and packaging commands use only local inputs:
+
+```sh
+make report
+make zip
+make demo-info
+```
+
+`make report` reads deterministic values from
+`data/processed/preprocess_log.json`, captures live `VERIFY_COUNTS` when Neo4j
+is available, builds local diagrams, writes `report/report.pdf`, extracts its
+text, and renders every page for verification. It requires the project
+environment plus ReportLab, Pillow, and Poppler (`pdfinfo`, `pdftotext`, and
+`pdftoppm`). If Neo4j or screenshots are unavailable, the report records that
+fact instead of inventing evidence. Screenshots belong in
+`report/screenshots/` and remain a team-supplied submission asset.
+
+`make zip` verifies the PDF and creates the reproducible `projects.zip` archive.
+The archive includes the report and a `source/` tree, but excludes raw and
+processed data, `.env`, `.venv`, `output/`, caches, logs, credentials, and the
+local-only `reference/orbit/` directory.
 
 The accepted SNAP archive SHA-256 is
 `5ed7b52a8013a1a1d43301a5414dfcb844e50cb4e2fb8dc801a7bef399552bb0`.
