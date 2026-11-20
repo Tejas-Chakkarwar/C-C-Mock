@@ -1,11 +1,12 @@
 # Cypher Circle
 
 Cypher Circle is a Python 3.13 console application backed by Neo4j. Milestones
-0 through 4 are implemented: the vertical slice, environment workflow,
-deterministic SNAP ego-Twitter data pipeline, service layer, and Rich console
-interface defined in `DESIGN.md` are acceptance-checked. The loaded graph is
-exercised through registration, login, profile editing, circles, connections,
-search, and network recommendations.
+0 through 5 are implemented: the vertical slice, environment workflow,
+deterministic SNAP ego-Twitter data pipeline, service layer, Rich console
+interface, and offline network visualization defined in `DESIGN.md` are
+acceptance-checked. The loaded graph is exercised through registration, login,
+profile editing, circles, connections, search, recommendations, and directed
+network visualization.
 
 ## Local setup
 
@@ -63,9 +64,22 @@ runtime. A fresh clone contains only `reference/README.md`; do not copy or
 modify Orbit code.
 
 The console application is started with `python -m cyphercircle` or `make run`.
-Milestone 4 provides registration, login, profiles, circles, connections,
-recommendations, search, popular users, pagination, and an optional Show
-Cypher view. Network visualization remains planned for Milestone 5.
+Milestones 4 and 5 provide registration, login, profiles, circles, connections,
+recommendations, search, popular users, pagination, an optional Show Cypher
+view, and the `V` network visualization action. Visualization writes
+`output/network_<username>.html`, opens it in the browser, and embeds all
+resources so the generated directed graph works offline. The page includes a
+legend for center, following-only, follower-only, and mutual nodes, plus
+neighbor-to-neighbor edges.
+
+To verify the generated page after running the visualization action, confirm
+that the file exists and has no external resource attributes:
+
+```sh
+rg -n -i 'href="https?://|src="https?://' output/network_*.html
+```
+
+The command should produce no matches.
 
 Actor-scoped service calls receive the authenticated `Session` returned by
 registration or login; callers do not provide an arbitrary username as the

@@ -305,6 +305,31 @@ ORDER BY since DESC, username ASC
 SKIP $skip LIMIT $limit
 """.strip()
 
+GET_EGO_NETWORK = """
+MATCH (me:User {username: $username})
+CALL (me) {
+  MATCH (me)-[:FOLLOWS]->(o:User)
+  WITH o ORDER BY o.username ASC
+  RETURN collect(o)[..$cap] AS outs
+}
+CALL (me) {
+  MATCH (i:User)-[:FOLLOWS]->(me)
+  WITH i ORDER BY i.username ASC
+  RETURN collect(i)[..$cap] AS ins
+}
+RETURN me.username AS center, me.name AS center_name,
+       [x IN outs | {username: x.username, name: x.name}] AS following,
+       [x IN ins  | {username: x.username, name: x.name}] AS followers
+""".strip()
+
+GET_EDGES_AMONG = """
+MATCH (a:User)-[:FOLLOWS]->(b:User)
+WHERE a.username IN $usernames AND b.username IN $usernames
+RETURN a.username AS src, b.username AS dst
+ORDER BY src ASC, dst ASC
+LIMIT $edge_cap
+""".strip()
+
 COUNT_MUTUAL_FOLLOWING = """
 MATCH (me:User {username: $me})-[:FOLLOWS]->(m:User)<-[:FOLLOWS]-(other:User {username: $other})
 RETURN count(DISTINCT m) AS total

@@ -10,6 +10,10 @@ class StartupDataError(CypherCircleError):
     pass
 
 
+class VisualizationError(CypherCircleError):
+    pass
+
+
 class DataIntegrityError(CypherCircleError):
     def __init__(self, message: str, constraint_name: str | None = None) -> None:
         super().__init__(message)

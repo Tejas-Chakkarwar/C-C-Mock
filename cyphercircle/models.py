@@ -97,3 +97,26 @@ class SearchResult:
     location: str | None
     followers: int
     i_follow: bool
+
+
+@dataclass(frozen=True)
+class NetworkNode:
+    username: str
+    name: str
+    category: str
+
+
+@dataclass(frozen=True)
+class NetworkEdge:
+    source: str
+    target: str
+
+
+@dataclass(frozen=True)
+class EgoNetwork:
+    nodes: list[NetworkNode]
+    edges: list[NetworkEdge]
+
+    @property
+    def has_connections(self) -> bool:
+        return len(self.nodes) > 1

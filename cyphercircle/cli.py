@@ -30,6 +30,7 @@ from .errors import (
     SelfActionError,
     StartupDataError,
     ValidationError,
+    VisualizationError,
 )
 from .graph_service import GraphService
 from .models import (
@@ -44,6 +45,7 @@ from .models import (
 from .profile_service import ProfileService
 from .search_service import SearchService
 from .startup_service import StartupService
+from .viz_service import VisualizationService
 
 
 InputFunc = Callable[[str], str]
@@ -88,6 +90,7 @@ class CLI:
         logger: logging.Logger | None = None,
         startup: StartupService | None = None,
         stats: GraphStats | None = None,
+        visualization: VisualizationService | None = None,
     ) -> None:
         self.auth = auth
         self.profile = profile
@@ -100,6 +103,7 @@ class CLI:
         self.logger = logger or LOGGER
         self.startup = startup
         self.stats = stats
+        self.visualization = visualization
         self._display_entries: list[LoggedQuery] | None = None
         self.session: Session | None = None
         self.show_cypher = False
@@ -169,7 +173,7 @@ class CLI:
                 label, action = actions[choice]
                 self._execute(label, action)
             elif choice == "v":
-                self._execute("UC-12", self._visualization_placeholder)
+                self._execute("UC-12", self._visualization)
             elif choice == "c":
                 self.show_cypher = not self.show_cypher
                 state = "ON" if self.show_cypher else "OFF"
@@ -475,12 +479,25 @@ class CLI:
         self._run_mutation("UC-5", lambda: self.graph.follow(session, target))
         self.console.print(f"[green]You are now following @{escape_markup(target)}.[/green]")
 
-    def _visualization_placeholder(self) -> None:
+    def _visualization(self) -> None:
+        session = self._require_session()
+        if self.visualization is None:
+            raise VisualizationError("Network visualization is not configured.")
+        path = self.visualization.generate(session)
+        if path is None:
+            self.console.print(
+                Panel(
+                    "No network yet. Follow someone first.",
+                    title="UC-12 · Network Visualization",
+                    border_style="yellow",
+                )
+            )
+            return
         self.console.print(
             Panel(
-                "Network visualization is planned for Milestone 5 and is not available yet.",
+                f"Saved to {escape_markup(path)}\nThe visualization was opened in your browser.",
                 title="UC-12 · Network Visualization",
-                border_style="yellow",
+                border_style="green",
             )
         )
 
@@ -632,6 +649,7 @@ class CLI:
             QueryError,
             SelfActionError,
             ValidationError,
+            VisualizationError,
         ) as exc:
             self._print_error(exc)
             return None
@@ -662,6 +680,8 @@ class CLI:
             message = "The operation conflicts with existing data."
         elif isinstance(error, QueryError):
             message = "The database operation could not be completed."
+        elif isinstance(error, VisualizationError):
+            message = str(error)
         else:
             message = str(error)
         self.console.print(f"[red]{escape_markup(message)}[/red]")
@@ -798,6 +818,7 @@ def build_cli(console: Console | None = None) -> tuple[CLI, Database]:
             console=console,
             startup=startup,
             stats=stats,
+            visualization=VisualizationService(database),
         ),
         database,
     )

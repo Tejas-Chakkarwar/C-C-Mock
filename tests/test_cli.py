@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from io import StringIO
+from pathlib import Path
 
 import pytest
 from rich.console import Console
@@ -130,11 +131,22 @@ class FakeSearch:
         return [UserSummary("bob.b", "Bob", None, 4)]
 
 
+class FakeVisualization:
+    def __init__(self, query_log: QueryLog) -> None:
+        self.query_log = query_log
+
+    def generate(self, _session: Session) -> Path:
+        self.query_log.record(LoggedQuery("GET_EGO_NETWORK", "RETURN 1", {}, 1))
+        self.query_log.record(LoggedQuery("GET_EDGES_AMONG", "RETURN 1", {}, 2))
+        return Path("output/network_alice.a.html")
+
+
 def _cli(
     *,
     auth: FakeAuth | None = None,
     input_values: list[str],
     password_values: list[str] | None = None,
+    visualization: FakeVisualization | None = None,
 ):
     console, output = _console()
     query_log = QueryLog()
@@ -148,6 +160,7 @@ def _cli(
         console=console,
         input_func=_feeder(input_values),
         password_func=_feeder(password_values or []),
+        visualization=visualization,
     )
     return cli, graph, output
 
@@ -326,3 +339,28 @@ def test_show_cypher_displays_redacted_parameters_and_not_password_field() -> No
     assert "***" in rendered
     assert "password_hash" not in rendered
     assert "password" not in rendered
+
+
+def test_visualization_action_shows_all_queries_and_output_path() -> None:
+    console, output = _console()
+    query_log = QueryLog()
+    visualization = FakeVisualization(query_log)
+    cli = CLI(
+        FakeAuth(),
+        FakeProfile(query_log),
+        FakeGraph(query_log),
+        FakeSearch(),
+        query_log,
+        console=console,
+        input_func=_feeder(["1", "alice.a", "c", "v", "0", "0"]),
+        password_func=_feeder(["password"]),
+        visualization=visualization,
+    )
+
+    assert cli.run() == 0
+    rendered = output.getvalue()
+    assert cli.query_log.action == "UC-12"
+    assert "UC-12 · Network Visualization" in rendered
+    assert "GET_EGO_NETWORK" in rendered
+    assert "GET_EDGES_AMONG" in rendered
+    assert "output/network_alice.a.html" in rendered

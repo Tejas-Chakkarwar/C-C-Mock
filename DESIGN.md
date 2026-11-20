@@ -2,7 +2,7 @@
 
 **Course:** SJSU CS157C NoSQL Database Systems, Team Project
 **Stack:** Python 3.13.x console application with a browser-based generated network visualization, Neo4j 5.26.0 (Community), SNAP `ego-Twitter` dataset (subset)
-**Status:** Milestones 0–4 implemented; Milestones 5–6 pending
+**Status:** Milestones 0–5 implemented; Milestone 6 pending
 
 **Changes from v1:** dataset switched from `email-Eu-core` to `ego-Twitter` (real follow edges). `Department` replaced by `Circle`. Visualization promoted from bonus to required-until-confirmed. Fixed: duplicate-registration check, UC-8 totals, multi-query Show Cypher logging, username generation, timestamp format, `source_id` uniqueness, circle removal, loader idempotency, reproducible report build, 3-person team split.
 
@@ -842,14 +842,12 @@ Every list a query returns is ordered explicitly. Every `ORDER BY` ends with a u
 ```cypher
 // GET_EGO_NETWORK
 MATCH (me:User {username: $username})
-CALL {
-  WITH me
+CALL (me) {
   MATCH (me)-[:FOLLOWS]->(o:User)
   WITH o ORDER BY o.username ASC
   RETURN collect(o)[..$cap] AS outs
 }
-CALL {
-  WITH me
+CALL (me) {
   MATCH (i:User)-[:FOLLOWS]->(me)
   WITH i ORDER BY i.username ASC
   RETURN collect(i)[..$cap] AS ins
@@ -1206,8 +1204,16 @@ docker-compose, `.env.example`, pinned `requirements.txt`, Makefile, `config.py`
 **Accept when:** the Milestone 4 portion of the demo script (Section 15, UC-1 through UC-11) runs start to finish with no tracebacks, and Show Cypher shows multiple panels for UC-9. UC-12 remains a Milestone 5 placeholder until visualization is implemented.
 
 ### Milestone 5: Visualization
-`viz_service.py`.
-**Accept when:** UC-12 produces an HTML file that opens and shows a colored, directed ego graph with neighbor-to-neighbor edges.
+`viz_service.py`, offline self-contained HTML, and the CLI `V` action.
+UC-12 retrieves up to 50 following users and 50 followers, classifies the
+center/following-only/follower-only/mutual nodes, includes up to 500 directed
+edges among the selected users, writes `output/network_<username>.html`, and
+opens it in the browser. External `src` and `href` resources are removed and
+rejected before the file is returned. An empty network reports that the user
+has no network yet and does not create an empty page.
+**Accept when:** UC-12 produces an offline HTML file that opens and shows a
+colored, directed ego graph with neighbor-to-neighbor edges, and the unit and
+strict integration checks pass when Neo4j is available.
 
 ### Milestone 6: Report and packaging
 - `report/report.md` filled per Section 16, with real numbers from `preprocess_log.json` and `VERIFY_COUNTS`.
