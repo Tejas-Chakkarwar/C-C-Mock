@@ -176,6 +176,211 @@ CREATE (u:User {
 RETURN u.username AS username, u.name AS name
 """.strip()
 
+CREATE_USER_WITH_CIRCLES = """
+CREATE (u:User {
+  username: $username,
+  email: $email,
+  name: $name,
+  name_lc: toLower($name),
+  password_hash: $password_hash,
+  bio: $bio,
+  location: $location,
+  joined_at: datetime(),
+  source: 'app'
+})
+WITH u, $circle_ids AS circle_ids
+CALL (u, circle_ids) {
+  MATCH (c:Circle)
+  WHERE c.circle_id IN circle_ids
+  WITH c ORDER BY c.circle_id ASC
+  RETURN collect(c) AS circles
+}
+FOREACH (circle IN circles | MERGE (u)-[:IN_CIRCLE]->(circle))
+RETURN u.username AS username, u.name AS name
+""".strip()
+
+CHECK_REGISTRATION_CONFLICTS = """
+OPTIONAL MATCH (a:User {username: $username})
+OPTIONAL MATCH (b:User {email: $email})
+RETURN a IS NOT NULL AS username_taken,
+       b IS NOT NULL AS email_taken
+""".strip()
+
+GET_TOP_CIRCLES = """
+MATCH (c:Circle)
+RETURN c.circle_id AS circle_id, c.name AS name,
+       count { (:User)-[:IN_CIRCLE]->(c) } AS members
+ORDER BY members DESC, name ASC, circle_id ASC
+LIMIT $limit
+""".strip()
+
+GET_PROFILE = """
+MATCH (u:User {username: $username})
+CALL (u) {
+  MATCH (u)-[:IN_CIRCLE]->(c:Circle)
+  WITH c ORDER BY c.name ASC, c.circle_id ASC
+  RETURN collect(c.name) AS circle_names
+}
+RETURN u.username AS username, u.name AS name, u.email AS email,
+       u.bio AS bio, u.location AS location, u.joined_at AS joined_at,
+       circle_names[..5] AS circles, size(circle_names) AS circle_count,
+       count { (u)-[:FOLLOWS]->(:User) } AS following_count,
+       count { (:User)-[:FOLLOWS]->(u) } AS followers_count
+""".strip()
+
+UPDATE_PROFILE = """
+MATCH (u:User {username: $username})
+SET u.name = coalesce($name, u.name),
+    u.name_lc = toLower(coalesce($name, u.name)),
+    u.bio = coalesce($bio, u.bio),
+    u.location = coalesce($location, u.location),
+    u.updated_at = datetime()
+RETURN u.username AS username
+""".strip()
+
+CLEAR_BIO = """
+MATCH (u:User {username: $username})
+SET u.bio = null, u.updated_at = datetime()
+RETURN u.username AS username
+""".strip()
+
+CLEAR_LOCATION = """
+MATCH (u:User {username: $username})
+SET u.location = null, u.updated_at = datetime()
+RETURN u.username AS username
+""".strip()
+
+JOIN_CIRCLE = """
+MATCH (u:User {username: $username}), (c:Circle {circle_id: $circle_id})
+MERGE (u)-[:IN_CIRCLE]->(c)
+""".strip()
+
+LEAVE_CIRCLE = """
+MATCH (u:User {username: $username})-[r:IN_CIRCLE]->(c:Circle {circle_id: $circle_id})
+DELETE r
+""".strip()
+
+GET_MY_CIRCLES = """
+MATCH (u:User {username: $username})-[:IN_CIRCLE]->(c:Circle)
+RETURN c.circle_id AS circle_id, c.name AS name
+ORDER BY name ASC, circle_id ASC
+""".strip()
+
+CIRCLE_EXISTS = """
+MATCH (c:Circle {circle_id: $circle_id})
+RETURN count(c) > 0 AS exists
+""".strip()
+
+UNFOLLOW_USER = """
+MATCH (me:User {username: $me})-[r:FOLLOWS]->(target:User {username: $target})
+DELETE r
+""".strip()
+
+USER_EXISTS = """
+MATCH (u:User {username: $username})
+RETURN count(u) > 0 AS exists
+""".strip()
+
+COUNT_CONNECTIONS = """
+MATCH (me:User {username: $username})
+RETURN count { (me)-[:FOLLOWS]->(:User) } AS following,
+       count { (:User)-[:FOLLOWS]->(me) } AS followers
+""".strip()
+
+GET_FOLLOWING = """
+MATCH (me:User {username: $username})-[r:FOLLOWS]->(u:User)
+RETURN u.username AS username, u.name AS name, u.location AS location,
+       r.since AS since,
+       EXISTS { (u)-[:FOLLOWS]->(me) } AS follows_back
+ORDER BY since DESC, username ASC
+SKIP $skip LIMIT $limit
+""".strip()
+
+GET_FOLLOWERS = """
+MATCH (u:User)-[r:FOLLOWS]->(me:User {username: $username})
+RETURN u.username AS username, u.name AS name, u.location AS location,
+       r.since AS since,
+       EXISTS { (me)-[:FOLLOWS]->(u) } AS i_follow_back
+ORDER BY since DESC, username ASC
+SKIP $skip LIMIT $limit
+""".strip()
+
+COUNT_MUTUAL_FOLLOWING = """
+MATCH (me:User {username: $me})-[:FOLLOWS]->(m:User)<-[:FOLLOWS]-(other:User {username: $other})
+RETURN count(DISTINCT m) AS total
+""".strip()
+
+GET_MUTUAL_FOLLOWING = """
+MATCH (me:User {username: $me})-[:FOLLOWS]->(m:User)<-[:FOLLOWS]-(other:User {username: $other})
+RETURN m.username AS username, m.name AS name, m.location AS location
+ORDER BY m.name ASC, m.username ASC
+SKIP $skip LIMIT $limit
+""".strip()
+
+GET_RELATIONSHIP_STATUS = """
+MATCH (me:User {username: $me}), (other:User {username: $other})
+RETURN EXISTS { (me)-[:FOLLOWS]->(other) } AS i_follow,
+       EXISTS { (other)-[:FOLLOWS]->(me) } AS they_follow
+""".strip()
+
+RECOMMEND_BY_CIRCLE = """
+MATCH (me:User {username: $username})-[:IN_CIRCLE]->(c:Circle)<-[:IN_CIRCLE]-(rec:User)
+WHERE rec <> me AND NOT (me)-[:FOLLOWS]->(rec) AND NOT rec.username IN $exclude
+WITH rec, min(c.name) AS circle
+WITH rec, circle, count { (:User)-[:FOLLOWS]->(rec) } AS followers
+RETURN rec.username AS username, rec.name AS name, rec.location AS location,
+       followers, circle
+ORDER BY followers DESC, username ASC
+LIMIT $limit
+""".strip()
+
+GET_FOLLOWING_USERNAMES = """
+MATCH (:User {username: $username})-[:FOLLOWS]->(u:User)
+WITH u ORDER BY u.username ASC
+RETURN collect(u.username) AS usernames
+""".strip()
+
+GET_POPULAR_USERS = """
+MATCH (u:User)
+WHERE NOT u.username IN $exclude
+WITH u, count { (:User)-[:FOLLOWS]->(u) } AS followers
+RETURN u.username AS username, u.name AS name, u.location AS location, followers
+ORDER BY followers DESC, username ASC
+LIMIT $limit
+""".strip()
+
+SEARCH_USERS = """
+MATCH (u:User)
+WHERE u.username <> $me
+  AND (u.name_lc CONTAINS $q OR u.username CONTAINS $q)
+WITH u,
+     count { (:User)-[:FOLLOWS]->(u) } AS followers,
+     CASE WHEN u.username STARTS WITH $q OR u.name_lc STARTS WITH $q THEN 0 ELSE 1 END AS rank
+RETURN u.username AS username, u.name AS name, u.location AS location, followers,
+       EXISTS { (:User {username: $me})-[:FOLLOWS]->(u) } AS i_follow
+ORDER BY rank, followers DESC, username ASC
+LIMIT $limit
+""".strip()
+
+DELETE_USER_BY_USERNAME = """
+MATCH (u:User {username: $username})
+DETACH DELETE u
+""".strip()
+
+CREATE_TEST_CIRCLE = """
+CREATE (c:Circle {
+  circle_id: $circle_id,
+  name: $name,
+  source: 'integration_test'
+})
+RETURN c.circle_id AS circle_id, c.name AS name
+""".strip()
+
+DELETE_TEST_CIRCLE = """
+MATCH (c:Circle {circle_id: $circle_id, source: 'integration_test'})
+DETACH DELETE c
+""".strip()
+
 CREATE_SLICE_USER = """
 CREATE (u:User {
   username: $username,

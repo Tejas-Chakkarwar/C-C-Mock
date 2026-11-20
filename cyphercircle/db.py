@@ -57,8 +57,10 @@ class Database:
                 auth=(settings.user, settings.password),
             )
             self.driver.verify_connectivity()
-        except (AuthError, ServiceUnavailable, OSError) as exc:
-            raise DatabaseUnavailableError(str(exc)) from exc
+        except AuthError as exc:
+            raise DatabaseUnavailableError("Neo4j authentication failed") from exc
+        except (ServiceUnavailable, OSError) as exc:
+            raise DatabaseUnavailableError("Neo4j is unavailable") from exc
 
     def close(self) -> None:
         self.driver.close()
@@ -70,9 +72,23 @@ class Database:
                 records = [record.data() for record in result]
                 summary = result.consume()
         except ConstraintError as exc:
-            raise DataIntegrityError(str(exc)) from exc
+            message = str(exc)
+            constraint_name = next(
+                (
+                    name
+                    for name in (
+                        "user_username_unique",
+                        "user_email_unique",
+                        "user_source_id_unique",
+                        "circle_id_unique",
+                    )
+                    if name in message
+                ),
+                None,
+            )
+            raise DataIntegrityError("database constraint violation", constraint_name) from exc
         except (Neo4jError, OSError) as exc:
-            raise QueryError(str(exc)) from exc
+            raise QueryError("database query failed") from exc
         if log:
             self.query_log.record(
                 LoggedQuery(query_name, query, _redact(params), len(records))

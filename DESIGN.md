@@ -497,6 +497,13 @@ class Session:
     name: str
 ```
 
+Actor-scoped service methods receive this authenticated `Session` and derive
+the acting username from it. They do not accept a caller-supplied username as
+the actor. Target usernames remain explicit for operations such as following,
+mutual connections, and search. Registration creates the user and any
+requested circle memberships in one database statement so a failed
+registration cannot leave a partial account behind.
+
 ---
 
 ## 7. Use Case Specifications
