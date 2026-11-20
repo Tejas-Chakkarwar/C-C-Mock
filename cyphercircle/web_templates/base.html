@@ -8,16 +8,17 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
+  <a class="skip-link" href="#main-content">Skip to content</a>
   <header class="site-header">
     <div class="shell nav-shell">
       <a class="brand" href="{{ url_for('index') }}"><span class="brand-mark">CC</span> Cypher Circle</a>
       <nav class="nav-links" aria-label="Primary navigation">
         {% if current_user %}
-          <a href="{{ url_for('dashboard') }}">Dashboard</a>
-          <a href="{{ url_for('search_users') }}">Search</a>
-          <a href="{{ url_for('popular') }}">Explore</a>
-          <a href="{{ url_for('circles') }}">Circles</a>
-          <a href="{{ url_for('visualization') }}">Network</a>
+          <a class="{{ 'is-active' if request.endpoint == 'dashboard' else '' }}" href="{{ url_for('dashboard') }}"{% if request.endpoint == 'dashboard' %} aria-current="page"{% endif %}>Dashboard</a>
+          <a class="{{ 'is-active' if request.endpoint == 'search_users' else '' }}" href="{{ url_for('search_users') }}"{% if request.endpoint == 'search_users' %} aria-current="page"{% endif %}>Search</a>
+          <a class="{{ 'is-active' if request.endpoint == 'popular' else '' }}" href="{{ url_for('popular') }}"{% if request.endpoint == 'popular' %} aria-current="page"{% endif %}>Explore</a>
+          <a class="{{ 'is-active' if request.endpoint == 'circles' else '' }}" href="{{ url_for('circles') }}"{% if request.endpoint == 'circles' %} aria-current="page"{% endif %}>Circles</a>
+          <a class="{{ 'is-active' if request.endpoint in ('visualization', 'visualization_document') else '' }}" href="{{ url_for('visualization') }}"{% if request.endpoint in ('visualization', 'visualization_document') %} aria-current="page"{% endif %}>Network</a>
           <form method="post" action="{{ url_for('logout') }}" class="inline-form">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button class="nav-button" type="submit">Log out</button>
@@ -29,7 +30,7 @@
       </nav>
     </div>
   </header>
-  <main class="shell page-shell">
+  <main id="main-content" class="shell page-shell">
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         <div class="flash-stack" aria-live="polite">

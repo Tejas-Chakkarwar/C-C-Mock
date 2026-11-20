@@ -207,3 +207,21 @@ def test_search_service_normalizes_query_and_maps_follow_state() -> None:
     name, params = db.calls[-1]
     assert name == "SEARCH_USERS"
     assert params == {"me": "me.user", "q": "ali", "limit": 10}
+
+
+def test_search_service_popular_users_normalizes_exclusions() -> None:
+    db = FakeDB()
+    db.reads["GET_POPULAR_USERS"] = [{
+        "username": "popular.user",
+        "name": "Popular User",
+        "location": "Town",
+        "followers": 8,
+    }]
+
+    result = SearchService(db).popular_users(exclude=["  ALICE.A  "], limit=10)
+
+    assert result[0].username == "popular.user"
+    assert result[0].followers == 8
+    name, params = db.calls[-1]
+    assert name == "GET_POPULAR_USERS"
+    assert params == {"exclude": ["alice.a"], "limit": 10}

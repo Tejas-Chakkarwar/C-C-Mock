@@ -6,7 +6,7 @@ from .db import Database
 from .models import SearchResult, Session, UserSummary
 from .queries import GET_POPULAR_USERS, SEARCH_USERS
 from .service_utils import principal_username
-from .validation import normalize_search_query, validate_limit
+from .validation import normalize_search_query, normalize_username, validate_limit
 
 
 class SearchService:

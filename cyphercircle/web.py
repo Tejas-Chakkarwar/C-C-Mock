@@ -358,6 +358,7 @@ def create_app(
         identity = _identity_session()
         assert identity is not None
         username = request.args.get("username", "").strip()
+        page = _page(request.args.get("page"))
         result = None
         error = None
         if username:
@@ -365,12 +366,19 @@ def create_app(
                 result = services.graph.mutual_connections(
                     identity,
                     username,
-                    skip=(_page(request.args.get("page")) - 1) * 15,
+                    skip=(page - 1) * 15,
                     limit=15,
                 )
             except CypherCircleError as exc:
                 error = _friendly_error(exc)
-        return render_template("mutual.html", username=username, result=result, error=error)
+        return render_template(
+            "mutual.html",
+            username=username,
+            result=result,
+            error=error,
+            page=page,
+            has_next=bool(result and page * 15 < result.total),
+        )
 
     @app.get("/recommendations")
     @login_required
@@ -410,10 +418,15 @@ def create_app(
     def circles() -> str:
         identity = _identity_session()
         assert identity is not None
+        popular_circles = services.profile.get_top_circles(limit=20)
+        my_circles = services.profile.get_my_circles(identity)
+        circles_by_id = {circle.circle_id: circle for circle in popular_circles}
+        for circle in my_circles:
+            circles_by_id.setdefault(circle.circle_id, circle)
         return render_template(
             "circles.html",
-            circles=services.profile.get_top_circles(limit=20),
-            mine={circle.circle_id for circle in services.profile.get_my_circles(identity)},
+            circles=list(circles_by_id.values()),
+            mine={circle.circle_id for circle in my_circles},
         )
 
     @app.post("/circles/join")

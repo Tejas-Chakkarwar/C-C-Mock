@@ -13,6 +13,7 @@ from cyphercircle.models import (
     Connection,
     ConnectionCounts,
     GraphStats,
+    MutualConnection,
     MutualConnections,
     Profile,
     Recommendation,
@@ -324,6 +325,7 @@ def test_authenticated_actions_render_and_use_services(tmp_path: Path) -> None:
     assert b"Bob" in client.get("/recommendations").data
     assert b"Bob" in client.get("/search?q=bo").data
     assert b"Popular users" in client.get("/popular").data
+    assert b'aria-current="page"' in client.get("/popular").data
     assert b"Your circles" in client.get("/circles").data
     assert b"Network visualization" in client.get("/visualization").data
 
@@ -358,6 +360,50 @@ def test_recommendations_page_renders_card_structure_and_responsive_styles(tmp_p
     assert "grid-template-columns: repeat(3" in css
     assert "grid-template-columns: repeat(2" in css
     assert "grid-template-columns: 1fr" in css
+
+
+def test_mutual_connections_page_has_pagination_for_full_result_set(tmp_path: Path) -> None:
+    app, _auth, _profile, graph = _app(tmp_path)
+    graph.mutual_connections = lambda _session, _other, **_kwargs: MutualConnections(
+        31,
+        [MutualConnection("shared.user", "Shared User", "Toronto")],
+        RelationshipStatus(True, False),
+    )  # type: ignore[method-assign]
+    client = app.test_client()
+    _login(client)
+
+    response = client.get("/mutual?username=bob.b")
+
+    assert response.status_code == 200
+    assert b"31 total" in response.data
+    assert b"Next" in response.data
+    assert b"/mutual?username=bob.b&amp;page=2" in response.data
+
+
+def test_circles_page_shows_empty_directory_state(tmp_path: Path) -> None:
+    app, _auth, profile, _graph = _app(tmp_path)
+    profile.circles = []
+    client = app.test_client()
+    _login(client)
+
+    response = client.get("/circles")
+
+    assert response.status_code == 200
+    assert b"No circles are available yet." in response.data
+
+
+def test_circles_page_keeps_memberships_outside_popular_list(tmp_path: Path) -> None:
+    app, _auth, profile, _graph = _app(tmp_path)
+    profile.circles = [CircleSummary("1:0", "Popular", 12)]
+    profile.get_my_circles = lambda _session: [CircleSummary("99:0", "My Private Circle")]  # type: ignore[method-assign]
+    client = app.test_client()
+    _login(client)
+
+    response = client.get("/circles")
+
+    assert response.status_code == 200
+    assert b"My Private Circle" in response.data
+    assert b"Your membership" in response.data
 
 
 def test_logout_clears_session_and_visualization_is_safely_embedded(tmp_path: Path) -> None:
