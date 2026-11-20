@@ -1,9 +1,9 @@
 # Cypher Circle
 
 Cypher Circle is a Python 3.13 console application backed by Neo4j. Milestones
-0 through 3 are complete: the vertical slice, environment workflow,
-deterministic SNAP ego-Twitter data pipeline, and service layer defined in
-`DESIGN.md` are implemented and acceptance-checked. The loaded graph is
+0 through 4 are implemented: the vertical slice, environment workflow,
+deterministic SNAP ego-Twitter data pipeline, service layer, and Rich console
+interface defined in `DESIGN.md` are acceptance-checked. The loaded graph is
 exercised through registration, login, profile editing, circles, connections,
 search, and network recommendations.
 
@@ -32,6 +32,7 @@ make data
 make load
 make test-integration
 make slice-check
+make run
 ```
 
 `make load` intentionally refuses a non-empty database. To deliberately clear
@@ -60,6 +61,11 @@ The accepted SNAP archive SHA-256 is
 only. It is ignored by Git and is not required for tests, preprocessing, or
 runtime. A fresh clone contains only `reference/README.md`; do not copy or
 modify Orbit code.
+
+The console application is started with `python -m cyphercircle` or `make run`.
+Milestone 4 provides registration, login, profiles, circles, connections,
+recommendations, search, popular users, pagination, and an optional Show
+Cypher view. Network visualization remains planned for Milestone 5.
 
 Actor-scoped service calls receive the authenticated `Session` returned by
 registration or login; callers do not provide an arbitrary username as the

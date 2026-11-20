@@ -46,6 +46,8 @@ def validate_name(value: str) -> str:
     name = value.strip()
     if not name:
         raise ValidationError("name cannot be empty")
+    if any(character in name for character in "\r\n\u2028\u2029"):
+        raise ValidationError("name must be a single line")
     return name
 
 
@@ -56,6 +58,8 @@ def validate_bio(value: str | None) -> str | None:
         raise ValidationError("bio must be text")
     if len(value) > 160:
         raise ValidationError("bio must be at most 160 characters")
+    if any(character in value for character in "\r\n\u2028\u2029"):
+        raise ValidationError("bio must be a single line")
     return value
 
 
@@ -64,6 +68,8 @@ def validate_location(value: str | None) -> str | None:
         return None
     if not isinstance(value, str):
         raise ValidationError("location must be text")
+    if any(character in value for character in "\r\n\u2028\u2029"):
+        raise ValidationError("location must be a single line")
     return value
 
 

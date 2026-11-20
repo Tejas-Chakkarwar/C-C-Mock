@@ -9,6 +9,7 @@ from cyphercircle.validation import (
     normalize_username,
     validate_bio,
     validate_limit,
+    validate_location,
     validate_name,
     validate_password,
 )
@@ -38,6 +39,12 @@ def test_registration_field_limits() -> None:
         validate_bio("x" * 161)
     with pytest.raises(ValidationError, match="at least 8"):
         validate_password("short")
+
+
+@pytest.mark.parametrize("field", [validate_name, validate_bio, validate_location])
+def test_profile_text_fields_reject_line_breaks(field) -> None:
+    with pytest.raises(ValidationError, match="single line"):
+        field("safe\nforged menu")
 
 
 def test_search_and_limit_validation() -> None:

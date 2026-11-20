@@ -42,6 +42,13 @@ class Session:
 
 
 @dataclass(frozen=True)
+class GraphStats:
+    users: int
+    follows: int
+    circles: int
+
+
+@dataclass(frozen=True)
 class CircleSummary:
     circle_id: str
     name: str
