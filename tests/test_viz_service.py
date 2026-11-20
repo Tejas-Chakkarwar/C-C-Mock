@@ -148,6 +148,13 @@ def test_generate_creates_offline_direct_html_with_legend_and_browser_open(tmp_p
     assert "#f59e0b" in html and "#3b82f6" in html
     assert "#22c55e" in html and "#a855f7" in html
     assert '"arrows": "to"' in html
+    assert re.search(
+        r'"physics":\s*\{.*?"enabled": true.*?"stabilization":\s*\{.*?"enabled": true',
+        html,
+        re.DOTALL,
+    )
+    assert 'network.once("stabilizationIterationsDone"' in html
+    assert 'network.setOptions({physics: {enabled: false}});' in html
     assert "bob.b" in html and "cara.c" in html and "dana.d" in html
     assert "password_hash" not in html
     assert "cypher123" not in html

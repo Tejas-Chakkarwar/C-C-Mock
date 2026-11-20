@@ -36,6 +36,12 @@ _EXTERNAL_ATTRIBUTE_RE = re.compile(
     r"<[^>]+\b(?:src|href)\s*=\s*(['\"])https?://[^'\"]+\1",
     re.IGNORECASE,
 )
+_NETWORK_INIT = "network = new vis.Network(container, data, options);"
+_DISABLE_PHYSICS_AFTER_STABILIZATION = """
+network.once("stabilizationIterationsDone", function () {
+  network.setOptions({physics: {enabled: false}});
+});
+""".strip()
 
 
 class VisualizationService:
@@ -148,6 +154,10 @@ class VisualizationService:
                 height="750px",
                 width="100%",
             )
+            # Keep the initial layout deterministic and useful, then stop the
+            # force simulation so a settled graph does not continue shaking.
+            graph.toggle_physics(True)
+            graph.toggle_stabilization(True)
             for node in network.nodes:
                 graph.add_node(
                     node.username,
@@ -275,6 +285,12 @@ class VisualizationService:
             html = html.replace("</head>", f"{styles}\n</head>", 1)
         else:
             html = f"{styles}\n{html}"
+        if _NETWORK_INIT in html:
+            html = html.replace(
+                _NETWORK_INIT,
+                f"{_NETWORK_INIT}\n{_DISABLE_PHYSICS_AFTER_STABILIZATION}",
+                1,
+            )
         body = re.search(r"<body\b[^>]*>", html, re.IGNORECASE)
         if body:
             html = html[: body.end()] + f"\n{legend}" + html[body.end() :]
