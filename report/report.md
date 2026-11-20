@@ -785,7 +785,7 @@ No network asset is used by the report builder.
 
 The report builder ran the clean-clone-compatible unit suite:
 
-97 passed, 6 deselected
+102 passed, 6 deselected
 
 make verify-env, compile checks, and git diff --check are required acceptance
 checks. Strict integration tests require local Neo4j and must fail clearly when

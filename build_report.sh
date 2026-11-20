@@ -2,9 +2,9 @@
 set -eu
 
 ROOT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
-PYTHON_BIN="$ROOT_DIR/.venv/bin/python"
+PYTHON_BIN=${PYTHON:-"$ROOT_DIR/.venv/bin/python"}
 
-if [ ! -x "$PYTHON_BIN" ]; then
+if [ ! -x "$PYTHON_BIN" ] && ! command -v "$PYTHON_BIN" >/dev/null 2>&1; then
     echo "report build failed: Python executable not found: $PYTHON_BIN" >&2
     exit 1
 fi

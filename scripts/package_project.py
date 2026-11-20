@@ -11,7 +11,7 @@ ARCHIVE = ROOT / "projects.zip"
 PDF = REPORT_DIR / "report.pdf"
 TOP_LEVEL = (
     "README.md", "AGENTS.md", "DESIGN.md", "requirements.txt", "pyproject.toml",
-    "Makefile", "docker-compose.yml", ".env.example", "build_report.sh",
+    "Makefile", "docker-compose.yml", ".env.example", ".gitattributes", "build_report.sh",
 )
 FORBIDDEN = {".env", ".venv", "data/raw", "data/processed", "output", "reference/orbit", "__pycache__", ".pytest_cache"}
 

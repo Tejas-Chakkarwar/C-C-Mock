@@ -29,14 +29,17 @@ def _log_payload() -> dict[str, object]:
         "demo_search_matches": 1,
         "demo_users": {
             "busy_user": "busy.user",
-            "busy_user_rule": 0.2,
+            "busy_user_rule": "0.20",
             "busy_user_network_recommendations": 1,
             "mutual_partner": "mutual.user",
             "no_circle_user": "no.circle",
         },
         "faker_version": "40.54.0",
         "seed": 157,
-        "processed_files": {"users.csv": "b" * 64},
+        "processed_files": {
+            name: "b" * 64
+            for name in ("users.csv", "follows.csv", "circles.csv", "memberships.csv")
+        },
     }
 
 
@@ -62,6 +65,51 @@ def test_invalid_preprocessing_log_fails_with_missing_fields(tmp_path: Path) -> 
 
     with pytest.raises(RuntimeError, match="preprocessing log is missing fields"):
         build_report.load_log(path)
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "message"),
+    [
+        ("users", "4", "users.*non-negative integer"),
+        ("archive_sha256", "not-a-hash", "archive_sha256"),
+        ("processed_files", {"users.csv": "bad"}, "processed_files"),
+    ],
+)
+def test_invalid_preprocessing_log_rejects_bad_types_and_hashes(
+    tmp_path: Path, field: str, value: object, message: str
+) -> None:
+    payload = _log_payload()
+    payload[field] = value
+    path = tmp_path / "preprocess_log.json"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    with pytest.raises(RuntimeError, match=message):
+        build_report.load_log(path)
+
+
+def test_invalid_preprocessing_log_requires_all_demo_user_fields(tmp_path: Path) -> None:
+    payload = _log_payload()
+    del payload["demo_users"]["mutual_partner"]  # type: ignore[index]
+    path = tmp_path / "preprocess_log.json"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    with pytest.raises(RuntimeError, match="demo_users is missing fields: mutual_partner"):
+        build_report.load_log(path)
+
+
+def test_image_font_has_cross_platform_candidates_and_readable_fallback(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    assert any("Arial" in str(path) for path in build_report.FONT_CANDIDATES[False])
+    assert any("DejaVuSans" in str(path) for path in build_report.FONT_CANDIDATES[False])
+
+    monkeypatch.setitem(build_report.FONT_CANDIDATES, False, ())
+    build_report.image_font.cache_clear()
+    try:
+        font = build_report.image_font(24)
+        assert font.getbbox("Readable text")[2] > 0
+    finally:
+        build_report.image_font.cache_clear()
 
 
 def test_missing_report_asset_fails_clearly() -> None:

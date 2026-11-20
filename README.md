@@ -43,7 +43,8 @@ safe to erase.
 
 All Makefile targets use `.venv/bin/python` by default. Override `PYTHON` only
 when intentionally running a compatible toolchain, for example
-`make PYTHON=python3.13 test`.
+`make PYTHON=python3.13 test` or `make PYTHON=python3.13 report`. The report
+wrapper and packaging target use the selected interpreter consistently.
 
 `make data` keeps the original archive at `data/raw/twitter.tar.gz`, safely
 extracts it under `data/raw/twitter/`, and writes deterministic CSV output to

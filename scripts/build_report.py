@@ -5,6 +5,7 @@ import re
 import subprocess
 import sys
 import textwrap
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 from xml.sax.saxutils import escape
@@ -35,6 +36,38 @@ REQUIRED_LOG_FIELDS = {
     "demo_search_term", "demo_search_matches", "demo_users", "faker_version",
     "seed", "processed_files",
 }
+COUNT_FIELDS = {
+    "users", "edges_final", "circles", "memberships", "egos_total", "egos_selected",
+    "edges_from_ego_files", "ego_edges_added", "self_loops_dropped", "duplicates_dropped",
+    "dangling_dropped", "circles_raw", "circles_dropped_small", "users_without_circle",
+    "demo_search_matches",
+}
+DEMO_USER_FIELDS = {
+    "busy_user", "busy_user_rule", "busy_user_network_recommendations",
+    "mutual_partner", "no_circle_user",
+}
+PROCESSED_FILE_NAMES = {"users.csv", "follows.csv", "circles.csv", "memberships.csv"}
+DEMO_USER_RULES = {"0.20", "0.10", "top_followers"}
+SHA256_PATTERN = re.compile(r"^[0-9a-f]{64}$")
+
+FONT_CANDIDATES = {
+    False: (
+        Path("/System/Library/Fonts/Supplemental/Arial.ttf"),
+        Path("/Library/Fonts/Arial.ttf"),
+        Path.home() / "Library/Fonts/Arial.ttf",
+        Path("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"),
+        Path("/usr/share/fonts/truetype/liberation2/LiberationSans-Regular.ttf"),
+        Path("/usr/share/fonts/opentype/noto/NotoSans-Regular.ttf"),
+    ),
+    True: (
+        Path("/System/Library/Fonts/Supplemental/Arial Bold.ttf"),
+        Path("/Library/Fonts/Arial Bold.ttf"),
+        Path.home() / "Library/Fonts/Arial Bold.ttf",
+        Path("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"),
+        Path("/usr/share/fonts/truetype/liberation2/LiberationSans-Bold.ttf"),
+        Path("/usr/share/fonts/opentype/noto/NotoSans-Bold.ttf"),
+    ),
+}
 UC_QUERIES = {
     "UC-1": ["GET_TOP_CIRCLES", "CIRCLE_EXISTS", "CHECK_REGISTRATION_CONFLICTS", "CREATE_USER_WITH_CIRCLES"],
     "UC-2": ["GET_AUTH_BY_USERNAME"],
@@ -63,11 +96,42 @@ def load_log(path: Path = LOG) -> dict[str, Any]:
         data = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
         raise RuntimeError(f"could not read preprocessing log: {path}") from exc
+    if not isinstance(data, dict):
+        raise RuntimeError("preprocessing log must contain a JSON object")
     missing = sorted(REQUIRED_LOG_FIELDS - set(data))
     if missing:
         raise RuntimeError("preprocessing log is missing fields: " + ", ".join(missing))
+    for field in COUNT_FIELDS:
+        value = data[field]
+        if type(value) is not int or value < 0:
+            raise RuntimeError(f"preprocessing log field {field!r} must be a non-negative integer")
+    if not isinstance(data["archive_sha256"], str) or not SHA256_PATTERN.fullmatch(data["archive_sha256"]):
+        raise RuntimeError("preprocessing log field 'archive_sha256' must be a 64-character lowercase SHA-256")
+    if not isinstance(data["faker_version"], str) or not data["faker_version"].strip():
+        raise RuntimeError("preprocessing log field 'faker_version' must be a non-empty string")
+    if type(data["seed"]) is not int:
+        raise RuntimeError("preprocessing log field 'seed' must be an integer")
+    if not isinstance(data["demo_search_term"], str) or not data["demo_search_term"].strip():
+        raise RuntimeError("preprocessing log field 'demo_search_term' must be a non-empty string")
     if not isinstance(data["demo_users"], dict):
         raise RuntimeError("preprocessing log has an invalid demo_users section")
+    missing_demo = sorted(DEMO_USER_FIELDS - set(data["demo_users"]))
+    if missing_demo:
+        raise RuntimeError("demo_users is missing fields: " + ", ".join(missing_demo))
+    demo = data["demo_users"]
+    if not isinstance(demo["busy_user"], str) or not demo["busy_user"].strip():
+        raise RuntimeError("demo_users.busy_user must be a non-empty string")
+    if not isinstance(demo["busy_user_rule"], str) or demo["busy_user_rule"] not in DEMO_USER_RULES:
+        raise RuntimeError("demo_users.busy_user_rule has an invalid value")
+    if type(demo["busy_user_network_recommendations"]) is not int or demo["busy_user_network_recommendations"] < 0:
+        raise RuntimeError("demo_users.busy_user_network_recommendations must be a non-negative integer")
+    for field in ("mutual_partner", "no_circle_user"):
+        if demo[field] is not None and (not isinstance(demo[field], str) or not demo[field].strip()):
+            raise RuntimeError(f"demo_users.{field} must be a username or null")
+    if not isinstance(data["processed_files"], dict) or set(data["processed_files"]) != PROCESSED_FILE_NAMES:
+        raise RuntimeError("preprocessing log processed_files must contain the four processed CSV files")
+    if any(not isinstance(value, str) or not SHA256_PATTERN.fullmatch(value) for value in data["processed_files"].values()):
+        raise RuntimeError("preprocessing log processed_files must contain 64-character lowercase SHA-256 values")
     return data
 
 
@@ -165,9 +229,16 @@ def render(data: dict[str, Any], tests: str, counts: dict[str, int] | None, live
     return rendered
 
 
+@lru_cache(maxsize=None)
 def image_font(size: int, bold: bool = False) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
-    path = "/System/Library/Fonts/Supplemental/Arial Bold.ttf" if bold else "/System/Library/Fonts/Supplemental/Arial.ttf"
-    return ImageFont.truetype(path, size) if Path(path).is_file() else ImageFont.load_default()
+    for path in FONT_CANDIDATES[bold]:
+        try:
+            return ImageFont.truetype(path, size)
+        except OSError:
+            continue
+    # Pillow normally provides a FreeType-backed Aileron fallback. The sized
+    # API also keeps the fallback readable when no system font is available.
+    return ImageFont.load_default(size=size)
 
 
 def diagram_box(draw: ImageDraw.ImageDraw, coords: tuple[int, int, int, int], title: str, body: str, fill: str) -> None:

@@ -38,7 +38,7 @@ slice-check:
 	$(PYTHON) scripts/slice_check.py
 
 report:
-	./build_report.sh
+	PYTHON="$(PYTHON)" ./build_report.sh
 
 zip: report
 	$(PYTHON) scripts/package_project.py

@@ -8,7 +8,7 @@
 
 **Changes from v2:** ego network count corrected to 973. Removed the optional `twitter_combined` step so output is always reproducible. Seeded password hash is now a fixed constant (bcrypt salts are random). `Circle` nodes now come from Twitter's real `.circles` lists, with string IDs. Subset selection continues until **both** user and edge thresholds are met. Demo search term is computed during preprocessing. Neo4j image pinned. Visualization's browser output described explicitly.
 
-**Changes from v3:** added `scripts/seed_constants.py`, `cyphercircle/errors.py`, and `tests/fixtures/twitter_mini/` to the structure. Neo4j exceptions are now translated inside `db.py`, so services never import `neo4j`. Query-log redaction is recursive, and loader queries are never logged. Full determinism rules for RNG and CSV ordering. Stable tie-breakers on every `ORDER BY` and `collect`. Manual download keeps the original archive so the checksum is consistent. Neo4j pinned to an exact patch. Demo users for screenshots computed during preprocessing. Tests cover users with and without circles.
+**Changes from v3:** added `scripts/seed_constants.py` and `cyphercircle/errors.py` to the structure, with fixture-based preprocessing tests. Neo4j exceptions are now translated inside `db.py`, so services never import `neo4j`. Query-log redaction is recursive, and loader queries are never logged. Full determinism rules for RNG and CSV ordering. Stable tie-breakers on every `ORDER BY` and `collect`. Manual download keeps the original archive so the checksum is consistent. Neo4j pinned to an exact patch. Demo users for screenshots computed during preprocessing. Tests cover users with and without circles.
 
 **Changes from v4:** every `collect` is now ordered. The empty-database check covers all nodes, not just users. `busy_user` has an exact formula, fallback, and tie-breaker. Circle names include the owner's unique username, so they can't collide. New `make demo-info` command. Exact dependency pins and the real seeded password hash are recorded; environment verification is an explicit acceptance check.
 
@@ -894,6 +894,7 @@ cypher-circle/
 ├── DESIGN.md                    # this document; source of truth
 ├── docker-compose.yml
 ├── .env.example
+├── .gitattributes                # binary handling for report assets
 ├── .gitignore
 ├── requirements.txt             # all pinned with ==
 ├── pyproject.toml               # pytest config
@@ -905,11 +906,17 @@ cypher-circle/
 │   ├── README.md                # explains read-only reference policy
 │   └── orbit/                   # read-only prior student project; not shipped as implementation
 ├── scripts/
+│   ├── build_report.py
+│   ├── demo_info.py
 │   ├── download_dataset.py
-│   ├── seed_constants.py        # SEEDED_PASSWORD, SEEDED_PASSWORD_HASH, SEED
-│   ├── preprocess.py
 │   ├── load_data.py
-│   └── demo_info.py             # make demo-info
+│   ├── package_project.py
+│   ├── preprocess.py
+│   ├── seed_constants.py        # SEEDED_PASSWORD, SEEDED_PASSWORD_HASH, SEED
+│   ├── slice_check.py
+│   ├── smoke_check.py
+│   ├── verify_env.py
+│   └── verify_report.py
 ├── cyphercircle/
 │   ├── __init__.py
 │   ├── __main__.py              # python -m cyphercircle
@@ -923,23 +930,32 @@ cypher-circle/
 │   ├── profile_service.py
 │   ├── graph_service.py
 │   ├── search_service.py
+│   ├── service_utils.py
 │   ├── viz_service.py
 │   └── cli.py
 ├── tests/
-│   ├── fixtures/
-│   │   └── twitter_mini/        # 3 fake egos: .edges + .circles
 │   ├── conftest.py
+│   ├── test_cli.py
+│   ├── test_cli_integration.py
 │   ├── test_download.py          # no network: safe extraction + marker behavior
+│   ├── test_integration.py        # needs Neo4j; strict target must not skip
 │   ├── test_preprocess.py       # no DB
+│   ├── test_report.py            # report and packaging checks
+│   ├── test_services.py
+│   ├── test_services_integration.py
+│   ├── test_startup.py
 │   ├── test_usernames.py        # no DB
 │   ├── test_validation.py       # no DB
-│   └── test_integration.py      # needs Neo4j; strict target must not skip
+│   ├── test_viz_integration.py
+│   └── test_viz_service.py
+├── build_report.sh               # local report build entry point
 ├── output/                      # gitignored
 └── report/
     ├── report.md
+    ├── report.template.md
+    ├── report.pdf                 # generated and verified locally
     ├── diagrams/                # pre-rendered PNGs, committed
-    ├── screenshots/             # uc01.png … uc12.png
-    └── build_report.sh
+    └── screenshots/              # optional team-supplied uc01.png … uc12.png
 ```
 
 ---
@@ -1028,7 +1044,7 @@ NEO4J_PASSWORD=cyphercircle-dev
 | `make smoke-check` | execute `RETURN 1` through `Database.read()` and verify the call appears in `QueryLog` |
 | `make test` | run unit tests with the integration marker excluded; does not silently claim database coverage |
 | `make test-integration` | run only integration tests with a strict `--run-integration` option and fail if Neo4j is unavailable |
-| `make report` | `report/build_report.sh` |
+| `make report` | `build_report.sh` |
 | `make zip` | build `projects.zip`; requires a verified `report.pdf` and fails if it is missing |
 | `make demo-info` | print the screenshot values: `busy_user`, `mutual_partner`, `no_circle_user`, `demo_search_term` (with match count), and the seeded password. Also checks each user exists in Neo4j and warns if not |
 
@@ -1238,7 +1254,7 @@ strict integration checks pass when Neo4j is available.
 
 | Layer | File | DB | Covers |
 |---|---|---|---|
-| Unit | `test_preprocess.py` | no | ego selection determinism, both thresholds enforced, ego→node edges, circle parsing and small-circle drop, cleaning counts, seeded hash verifies, log fields. Uses a tiny fixture dataset in `tests/fixtures/twitter_mini/` (3 fake egos with `.edges` and `.circles`), not the real download |
+| Unit | `test_preprocess.py` | no | ego selection determinism, both thresholds enforced, ego→node edges, circle parsing and small-circle drop, cleaning counts, seeded hash verifies, log fields. Builds a tiny fixture dataset in a temporary directory, not the real download |
 | Unit | `test_usernames.py` | no | normalization of accented, apostrophe, hyphenated, and very long names. Regex and uniqueness |
 | Unit | `test_validation.py` | no | username, email, password, bio rules |
 | Integration | `test_integration.py` | yes | every use case on live Neo4j; must be run through the strict integration target for acceptance |
