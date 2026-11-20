@@ -242,7 +242,7 @@ def create_app(
                     form["username"],
                     password,
                     bio=form["bio"] or None,
-                    circle_ids=request.form.getlist("circle_ids")[:3],
+                    circle_ids=request.form.getlist("circle_ids"),
                 )
             except CypherCircleError as exc:
                 return render_template(

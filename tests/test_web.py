@@ -269,6 +269,26 @@ def test_registration_requires_matching_password_confirmation(tmp_path: Path) ->
     assert b"password123" not in response.data
 
 
+def test_registration_passes_all_circle_selections_to_service(tmp_path: Path) -> None:
+    app, auth, *_ = _app(tmp_path)
+    client = app.test_client()
+    client.get("/register")
+    response = client.post(
+        "/register",
+        data={
+            "csrf_token": _csrf(client),
+            "name": "New Person",
+            "email": "new@example.com",
+            "username": "new.person",
+            "password": "password123",
+            "password_confirm": "password123",
+            "circle_ids": ["1:0", "2:0", "3:0", "4:0"],
+        },
+    )
+    assert response.status_code == 302
+    assert auth.register_calls[0][1]["circle_ids"] == ["1:0", "2:0", "3:0", "4:0"]
+
+
 def test_login_failure_is_generic_and_password_is_not_rendered(tmp_path: Path) -> None:
     app, auth, *_ = _app(tmp_path)
     auth.login_error = AuthenticationError("Invalid username or password")
@@ -318,6 +338,26 @@ def test_authenticated_actions_render_and_use_services(tmp_path: Path) -> None:
     assert profile.join_calls == ["2:0"]
     assert profile.leave_calls == ["1:0"]
     assert profile.update_calls[0]["bio"] == "-"
+
+
+def test_recommendations_page_renders_card_structure_and_responsive_styles(tmp_path: Path) -> None:
+    app, *_ = _app(tmp_path)
+    client = app.test_client()
+    _login(client)
+    response = client.get("/recommendations")
+    assert response.status_code == 200
+    assert b"recommendation-grid" in response.data
+    assert b"recommendation-card" in response.data
+    assert b"card-top" in response.data
+    assert b"score" in response.data
+    assert b"reason-network" in response.data
+    assert b"Follow" in response.data
+
+    css = Path("cyphercircle/web_static/style.css").read_text(encoding="utf-8")
+    assert ".recommendation-grid" in css
+    assert "grid-template-columns: repeat(3" in css
+    assert "grid-template-columns: repeat(2" in css
+    assert "grid-template-columns: 1fr" in css
 
 
 def test_logout_clears_session_and_visualization_is_safely_embedded(tmp_path: Path) -> None:
