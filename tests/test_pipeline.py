@@ -246,3 +246,54 @@ def test_failed_load_cleans_only_its_load_token(
         if "load_token" in params
     }
     assert len(load_tokens) == 1
+
+
+def test_reset_mode_clears_nonempty_database_before_loading(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    processed, log = _write_processed_fixture(tmp_path)
+    datasets = {
+        "circles.csv": [{"circle_id": "1:0", "name": "circle", "source_label": "friends", "owner_source_id": 1}],
+        "users.csv": [{"source_id": 1}],
+        "memberships.csv": [{"circle_id": "1:0", "source_id": 1}],
+        "follows.csv": [{"src": 1, "dst": 2, "since": "2024-01-01T00:00:00Z"}],
+    }
+
+    class FakeDatabase:
+        instance = None
+
+        def __init__(self, _settings):
+            self.calls = []
+            FakeDatabase.instance = self
+
+        def read(self, name, _query, **_params):
+            self.calls.append((name, {}))
+            if name == "COUNT_ALL_NODES":
+                return ([{"nodes": 2}], None)
+            return ([{
+                "users": log["users"],
+                "circles": log["circles"],
+                "follows": log["edges_final"],
+                "memberships": log["memberships"],
+            }], None)
+
+        def write(self, name, _query, **params):
+            self.calls.append((name, params))
+            if name.startswith("LOAD_"):
+                return ([{"loaded": len(params["rows"])}], None)
+            return ([], None)
+
+        def close(self):
+            pass
+
+    monkeypatch.setattr(load_data, "Database", FakeDatabase)
+    monkeypatch.setattr(load_data, "load_settings", lambda: object())
+    monkeypatch.setattr(load_data, "SCHEMA", ())
+    monkeypatch.setattr(load_data, "validate_processed_manifest", lambda *_args: None)
+    monkeypatch.setattr(load_data, "validate_rows", lambda *_args, **_kwargs: datasets)
+
+    load_data.load(processed, reset=True)
+
+    names = [name for name, _params in FakeDatabase.instance.calls]
+    assert names[:2] == ["COUNT_ALL_NODES", "RESET_DATABASE"]
+    assert "FINALIZE_LOAD" in names

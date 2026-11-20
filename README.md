@@ -1,10 +1,10 @@
 # Cypher Circle
 
 Cypher Circle is a Python 3.13 console application backed by Neo4j. Milestones
-0 and 1 are complete: the vertical slice and environment workflow defined in
-`DESIGN.md`: SNAP ego-Twitter data is downloaded and deterministically
-preprocessed, loaded into Neo4j, and exercised through registration, login,
-follow, and network recommendation checks.
+0, 1, and 2 are complete: the vertical slice, environment workflow, and
+deterministic SNAP ego-Twitter data pipeline defined in `DESIGN.md` are
+implemented and acceptance-checked. The loaded graph is exercised through
+registration, login, follow, and network recommendation checks.
 
 ## Local setup
 
@@ -32,6 +32,11 @@ make load
 make test-integration
 make slice-check
 ```
+
+`make load` intentionally refuses a non-empty database. To deliberately clear
+the configured database and reload the processed dataset, use `make reset`.
+This passes `--reset` to the loader; run it only against a database that is
+safe to erase.
 
 All Makefile targets use `.venv/bin/python` by default. Override `PYTHON` only
 when intentionally running a compatible toolchain, for example

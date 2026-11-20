@@ -7,6 +7,13 @@ MATCH (n)
 RETURN count(n) AS nodes
 """.strip()
 
+RESET_DATABASE = """
+CALL () {
+  MATCH (n)
+  DETACH DELETE n
+} IN TRANSACTIONS OF 5000 ROWS
+""".strip()
+
 CREATE_USER_USERNAME_CONSTRAINT = """
 CREATE CONSTRAINT user_username_unique IF NOT EXISTS
 FOR (u:User) REQUIRE u.username IS UNIQUE

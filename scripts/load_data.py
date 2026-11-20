@@ -28,6 +28,7 @@ from cyphercircle.queries import (
     LOAD_MEMBERSHIPS,
     LOAD_USERS,
     FINALIZE_LOAD,
+    RESET_DATABASE,
     VERIFY_DATASET_COUNTS,
 )
 from scripts.seed_constants import TWITTER_ARCHIVE_SHA256
@@ -195,7 +196,7 @@ def validate_rows(
     return loaded
 
 
-def load(processed_dir: Path, batch_size: int = 1000) -> dict:
+def load(processed_dir: Path, batch_size: int = 1000, *, reset: bool = False) -> dict:
     log = json.loads((processed_dir / "preprocess_log.json").read_text(encoding="utf-8"))
     db = Database(load_settings())
     load_token = uuid4().hex
@@ -208,8 +209,10 @@ def load(processed_dir: Path, batch_size: int = 1000) -> dict:
     load_started = False
     try:
         rows, _ = db.read("COUNT_ALL_NODES", COUNT_ALL_NODES)
-        if rows[0]["nodes"]:
-            raise SystemExit("Database isn't empty. Use a fresh database for Milestone 0.")
+        if rows[0]["nodes"] and not reset:
+            raise SystemExit("Database isn't empty. Use make reset for a clean reload.")
+        if reset:
+            db.write("RESET_DATABASE", RESET_DATABASE, log=False)
         validate_processed_manifest(processed_dir, log)
         loaded = validate_rows(processed_dir, log, datasets)
         load_started = True
@@ -264,8 +267,13 @@ def load(processed_dir: Path, batch_size: int = 1000) -> dict:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--processed-dir", type=Path, default=ROOT / "data/processed")
+    parser.add_argument(
+        "--reset",
+        action="store_true",
+        help="wipe the configured database before loading the processed dataset",
+    )
     args = parser.parse_args()
-    load(args.processed_dir)
+    load(args.processed_dir, reset=args.reset)
 
 
 if __name__ == "__main__":
