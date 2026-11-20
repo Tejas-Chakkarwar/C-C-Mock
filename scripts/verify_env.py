@@ -9,6 +9,7 @@ import pytest
 import rich
 import dotenv
 import reportlab
+import flask
 from PIL import Image
 from faker import Faker
 from pyvis.network import Network
@@ -30,6 +31,7 @@ EXPECTED = {
     "reportlab": "4.4.5",
     "Pillow": "11.3.0",
     "charset-normalizer": "3.5.2",
+    "Flask": "3.1.2",
 }
 
 
@@ -41,7 +43,7 @@ def main() -> int:
         if actual != expected:
             raise SystemExit(f"{package}=={expected} required; found {actual}")
     # Import each declared runtime/test dependency as well as checking metadata.
-    _ = (neo4j, pytest, rich, dotenv, Network, reportlab, Image)
+    _ = (neo4j, pytest, rich, dotenv, Network, reportlab, Image, flask)
     if not bcrypt.checkpw(SEEDED_PASSWORD.encode("utf-8"), SEEDED_PASSWORD_HASH.encode("ascii")):
         raise SystemExit("seeded bcrypt hash does not verify")
     Faker.seed(SEED)

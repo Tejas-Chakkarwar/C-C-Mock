@@ -209,6 +209,10 @@ def _fake_package_tree(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         path = root / relative
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text("placeholder", encoding="utf-8")
+    (root / "cyphercircle/web_templates").mkdir(parents=True)
+    (root / "cyphercircle/web_templates/base.html").write_text("template", encoding="utf-8")
+    (root / "cyphercircle/web_static").mkdir(parents=True)
+    (root / "cyphercircle/web_static/style.css").write_text("style", encoding="utf-8")
     report_dir = root / "report"
     (report_dir / "diagrams").mkdir(parents=True)
     (report_dir / "report.md").write_text("report", encoding="utf-8")
@@ -231,6 +235,8 @@ def test_package_sources_are_allowlisted(tmp_path: Path, monkeypatch: pytest.Mon
     assert "source/report/report.md" in names
     assert "source/report/report.template.md" in names
     assert "source/report/diagrams/schema.png" in names
+    assert "source/cyphercircle/web_templates/base.html" in names
+    assert "source/cyphercircle/web_static/style.css" in names
     assert all("reference/orbit" not in name for name in names)
 
 

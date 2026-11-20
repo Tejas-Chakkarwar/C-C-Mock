@@ -31,6 +31,14 @@ class ProfileService:
 
     def get_profile(self, session: Session) -> Profile:
         username = principal_username(session)
+        return self._get_profile(username)
+
+    def get_public_profile(self, username: str) -> Profile:
+        """Return public profile data for a validated target username."""
+
+        return self._get_profile(normalize_username(username))
+
+    def _get_profile(self, username: str) -> Profile:
         rows, _ = self.db.read("GET_PROFILE", GET_PROFILE, username=username)
         if not rows:
             raise NotFoundError(f"user @{username} was not found")

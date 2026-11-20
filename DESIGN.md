@@ -1,8 +1,11 @@
 # Cypher Circle: Design Document (v8, implementation-ready)
 
 **Course:** SJSU CS157C NoSQL Database Systems, Team Project
-**Stack:** Python 3.13.x console application with a browser-based generated network visualization, Neo4j 5.26.0 (Community), SNAP `ego-Twitter` dataset (subset)
-**Status:** Milestones 0–6 implemented; final submission evidence remains team-supplied
+**Stack:** Python 3.13.x application with a Rich console, Flask/Jinja browser UI,
+browser-based generated network visualization, Neo4j 5.26.0 (Community), SNAP
+`ego-Twitter` dataset (subset)
+**Status:** Milestones 0–6 implemented; the post-Milestone-6 Flask web extension
+is implemented; final submission evidence remains team-supplied
 
 **Changes from v1:** dataset switched from `email-Eu-core` to `ego-Twitter` (real follow edges). `Department` replaced by `Circle`. Visualization promoted from bonus to required-until-confirmed. Fixed: duplicate-registration check, UC-8 totals, multi-query Show Cypher logging, username generation, timestamp format, `source_id` uniqueness, circle removal, loader idempotency, reproducible report build, 3-person team split.
 
@@ -374,6 +377,9 @@ flowchart TB
     subgraph Console["Console UI (rich)"]
         CLI[cli.py<br/>menus, prompts, tables, Show Cypher]
     end
+    subgraph Browser["Browser UI (Flask + Jinja)"]
+        WEB[web.py<br/>routes, CSRF, templates, shell]
+    end
     subgraph Services["Service layer (rules + validation)"]
         AUTH[auth_service.py<br/>UC-1, UC-2]
         PROF[profile_service.py<br/>UC-3, UC-4]
@@ -388,13 +394,15 @@ flowchart TB
     NEO[(Neo4j 5<br/>Docker)]
 
     CLI --> AUTH & PROF & GRAPH & SRCH & VIZ
+    WEB --> AUTH & PROF & GRAPH & SRCH & VIZ
     AUTH & PROF & GRAPH & SRCH & VIZ --> Q
     AUTH & PROF & GRAPH & SRCH & VIZ --> DB
     DB --> NEO
 ```
 
 **Rules:**
-- The CLI only talks to services. It never touches the driver.
+- The CLI and web UI only talk to services. They never touch the driver or
+  execute Cypher directly.
 - Services hold validation and business rules, and return dataclasses (6.3), not Neo4j records.
 - `db.py` is the only module that imports `neo4j`. It translates driver exceptions into app exceptions from `cyphercircle/errors.py`, so services never see Neo4j types:
   ```python
@@ -932,7 +940,10 @@ cypher-circle/
 │   ├── search_service.py
 │   ├── service_utils.py
 │   ├── viz_service.py
-│   └── cli.py
+│   ├── cli.py
+│   ├── web.py                  # Flask entry point and thin route adapter
+│   ├── web_templates/          # Jinja templates for the browser UI
+│   └── web_static/             # self-contained responsive CSS
 ├── tests/
 │   ├── conftest.py
 │   ├── test_cli.py
@@ -947,7 +958,8 @@ cypher-circle/
 │   ├── test_usernames.py        # no DB
 │   ├── test_validation.py       # no DB
 │   ├── test_viz_integration.py
-│   └── test_viz_service.py
+│   ├── test_viz_service.py
+│   └── test_web.py             # Flask unit tests with mocked services
 ├── build_report.sh               # local report build entry point
 ├── output/                      # gitignored
 └── report/
@@ -972,6 +984,7 @@ rich==15.0.0
 python-dotenv==1.2.4
 pyvis==0.3.2
 pytest==9.2.0
+Flask==3.1.2
 ```
 
 | Package | Purpose | Note |
@@ -986,6 +999,7 @@ pytest==9.2.0
 | `reportlab` | local report PDF rendering | |
 | `Pillow` | local report diagram generation and PDF page checks | |
 | `charset-normalizer` | pinned ReportLab dependency | |
+| `Flask` | browser UI entry point | Jinja templates; no frontend build system |
 
 Milestone 1 must verify this set in a clean Python **3.13** virtual environment, including imports, the seeded bcrypt hash, and a short Faker determinism check. The seeded password hash in 4.4 must verify with `checkpw` using encoded bytes.
 
@@ -1248,6 +1262,22 @@ strict integration checks pass when Neo4j is available.
 
 **Accept when:** `make report` produces a verified `report.pdf`, and `make zip` produces `projects.zip` with that PDF and a `source/` folder (code, scripts, tests, README, requirements, docker-compose, Makefile). The packaging script must fail if the PDF is absent and must **exclude** `data/raw`, `data/processed`, `.env`, `output/`, `__pycache__`, `.venv`, temporary extraction directories, and local credentials.
 
+### Post-Milestone-6 web extension
+
+`web.py`, Jinja templates, and local CSS add a browser dashboard while keeping
+`python -m cyphercircle` and `make run` as the unchanged CLI entry points. The
+web layer reuses the existing services and `VisualizationService`; it adds no
+Cypher or duplicate authorization logic. It stores only a signed username and
+display name in the Flask session, protects POST mutations with CSRF tokens,
+uses local assets only, and renders the generated visualization in a sandboxed
+iframe. `make web` starts the server with `WEB_HOST`, `WEB_PORT`,
+`WEB_SECRET_KEY`, and `WEB_DEBUG` settings.
+
+**Accept when:** web unit tests cover the authenticated flows, validation,
+CSRF, safe rendering, and sanitized errors; `make run` remains the CLI entry
+point; `make web` starts with the local dependency set; and the existing CLI,
+service, pipeline, visualization, report, and packaging checks remain green.
+
 ---
 
 ## 14. Testing Strategy
@@ -1336,8 +1366,7 @@ Whoever owns a use case takes its screenshots and writes its report subsection. 
 
 ## 18. Out of Scope
 
-- Web front end, REST API, or GUI beyond the console (UC-12's HTML is a generated static file).
-- Posts, likes, messages, notifications.
+- A REST API, posts, likes, messages, notifications, or a frontend build system.
 - Password reset, email verification, session persistence.
 - Importing real Twitter profile features (hashtags, mentions).
 - Neo4j Enterprise or Graph Data Science library. Plain Cypher only, so every query shows cleanly in the report.

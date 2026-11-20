@@ -1,6 +1,7 @@
 # Cypher Circle
 
-Cypher Circle is a Python 3.13 console application backed by Neo4j. Milestones
+Cypher Circle is a Python 3.13 application backed by Neo4j, with a first-class
+Rich console and a polished Flask browser interface. Milestones
 0 through 6 are implemented: the vertical slice, environment workflow,
 deterministic SNAP ego-Twitter data pipeline, service layer, Rich console
 interface, offline network visualization, and reproducible report/package
@@ -103,6 +104,27 @@ rg -n -i 'href="https?://|src="https?://' output/network_*.html
 ```
 
 The command should produce no matches.
+
+## Browser UI
+
+The browser interface is an additional entry point; it does not replace the
+CLI. Start Neo4j and load the graph first, then run:
+
+```sh
+make web
+```
+
+Open [http://127.0.0.1:5000](http://127.0.0.1:5000). The host and port come
+from `WEB_HOST` and `WEB_PORT`; `WEB_SECRET_KEY` controls signed web sessions
+and should be a private random value for a persistent local setup. `WEB_DEBUG`
+defaults to `false` and is not enabled by `make web`.
+
+The web UI supports registration and login, profile editing, public profiles,
+following and unfollowing, connections and mutual connections, search,
+recommendations, popular users, circle membership, and the existing offline
+network visualization. Mutations use POST plus CSRF tokens, and the browser
+session stores only the signed username and display name. Passwords and
+password hashes are never stored in the web session or rendered in templates.
 
 Actor-scoped service calls receive the authenticated `Session` returned by
 registration or login; callers do not provide an arbitrary username as the

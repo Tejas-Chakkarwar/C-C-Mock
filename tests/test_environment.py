@@ -57,3 +57,24 @@ def test_query_log_records_and_redacts_nested_passwords() -> None:
     assert entry.params == {"rows": [{"password_hash": "***", "name": "Alice"}]}
     log.begin_action("NEXT")
     assert log.entries() == []
+
+
+def test_web_settings_have_local_safe_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
+    _without_dotenv(monkeypatch)
+    for name in ("WEB_HOST", "WEB_PORT", "WEB_SECRET_KEY", "WEB_DEBUG"):
+        monkeypatch.delenv(name, raising=False)
+
+    settings = config.load_web_settings()
+
+    assert settings.host == "127.0.0.1"
+    assert settings.port == 5000
+    assert settings.secret_key
+    assert settings.debug is False
+
+
+def test_invalid_web_port_is_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
+    _without_dotenv(monkeypatch)
+    monkeypatch.setenv("WEB_PORT", "not-a-port")
+
+    with pytest.raises(ValueError, match="WEB_PORT"):
+        config.load_web_settings()

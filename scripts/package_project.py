@@ -23,9 +23,22 @@ def python_files(directory: str) -> list[Path]:
     return sorted(path for path in root.rglob("*.py") if path.is_file() and "__pycache__" not in path.parts)
 
 
+def resource_files(directory: str) -> list[Path]:
+    root = ROOT / directory
+    if root.is_symlink():
+        raise RuntimeError(f"symlink source directory is not allowed: {root.relative_to(ROOT)}")
+    return sorted(
+        path
+        for path in root.rglob("*")
+        if path.is_file() and "__pycache__" not in path.parts
+    )
+
+
 def sources() -> list[tuple[Path, str]]:
     entries: list[tuple[Path, str]] = [(ROOT / name, f"source/{name}") for name in TOP_LEVEL]
     entries += [(path, f"source/{path.relative_to(ROOT)}") for path in python_files("cyphercircle")]
+    entries += [(path, f"source/{path.relative_to(ROOT)}") for path in resource_files("cyphercircle/web_templates")]
+    entries += [(path, f"source/{path.relative_to(ROOT)}") for path in resource_files("cyphercircle/web_static")]
     entries += [(path, f"source/{path.relative_to(ROOT)}") for path in python_files("scripts")]
     entries += [(path, f"source/{path.relative_to(ROOT)}") for path in python_files("tests")]
     entries += [(path, f"source/report/diagrams/{path.name}") for path in sorted((REPORT_DIR / "diagrams").glob("*.png"))]

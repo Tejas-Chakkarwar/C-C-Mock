@@ -1,6 +1,6 @@
 PYTHON ?= .venv/bin/python
 
-.PHONY: up down data load reset run verify-env smoke-check test test-integration slice-check report zip demo-info
+.PHONY: up down data load reset run web verify-env smoke-check test test-integration slice-check report zip demo-info
 
 up:
 	@if [ ! -f .env ]; then cp .env.example .env && chmod 600 .env; fi
@@ -21,6 +21,9 @@ reset:
 
 run:
 	$(PYTHON) -m cyphercircle
+
+web:
+	$(PYTHON) -m cyphercircle.web
 
 verify-env:
 	$(PYTHON) scripts/verify_env.py
