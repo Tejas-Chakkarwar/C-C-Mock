@@ -86,8 +86,14 @@ def validate_processed_manifest(processed_dir: Path, log: dict) -> None:
             raise ValueError(f"processed file hash mismatch: {filename}")
 
 
-def validate_rows(processed_dir: Path, log: dict, datasets: tuple) -> dict[str, list[dict]]:
-    if log["users"] < 1000 or log["edges_final"] < 5000:
+def validate_rows(
+    processed_dir: Path,
+    log: dict,
+    datasets: tuple,
+    *,
+    enforce_assignment_minimums: bool = True,
+) -> dict[str, list[dict]]:
+    if enforce_assignment_minimums and (log["users"] < 1000 or log["edges_final"] < 5000):
         raise ValueError("preprocess log is below the mandatory dataset minimums")
     loaded = {filename: read_rows(processed_dir / filename) for filename, _, _ in datasets}
     expected_lengths = {

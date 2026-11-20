@@ -16,7 +16,7 @@
 
 ## Technology constraints
 
-- Python 3.11.4 or newer.
+- Python 3.13.x in this project's local `.venv`.
 - Neo4j Community 5.26.0.
 - Python console interface with generated browser-based visualization.
 - SNAP `ego-Twitter` deterministic subset.

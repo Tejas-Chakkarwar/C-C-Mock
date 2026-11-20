@@ -1,7 +1,7 @@
 # Cypher Circle: Design Document (v8, implementation-ready)
 
 **Course:** SJSU CS157C NoSQL Database Systems, Team Project
-**Stack:** Python 3.11.4+ console application with a browser-based generated network visualization, Neo4j 5.26.0 (Community), SNAP `ego-Twitter` dataset (subset)
+**Stack:** Python 3.13.x console application with a browser-based generated network visualization, Neo4j 5.26.0 (Community), SNAP `ego-Twitter` dataset (subset)
 **Status:** Design reviewed, ready for implementation
 
 **Changes from v1:** dataset switched from `email-Eu-core` to `ego-Twitter` (real follow edges). `Department` replaced by `Circle`. Visualization promoted from bonus to required-until-confirmed. Fixed: duplicate-registration check, UC-8 totals, multi-query Show Cypher logging, username generation, timestamp format, `source_id` uniqueness, circle removal, loader idempotency, reproducible report build, 3-person team split.
@@ -12,9 +12,9 @@
 
 **Changes from v4:** every `collect` is now ordered. The empty-database check covers all nodes, not just users. `busy_user` has an exact formula, fallback, and tie-breaker. Circle names include the owner's unique username, so they can't collide. New `make demo-info` command. Exact dependency pins and the real seeded password hash are recorded; environment verification is an explicit acceptance check.
 
-**Changes from v5:** exact extraction layout, with safe tar extraction. `demo_users` JSON structure defined. Report wording for filtered circle membership and reconstructed ego edges. App startup uses the same all-nodes check as the loader. Dependency verification is an explicit acceptance check for Python 3.11.4 and 3.13. Visualization HTML is fully self-contained. Build plan starts with a vertical slice.
+**Changes from v5:** exact extraction layout, with safe tar extraction. `demo_users` JSON structure defined. Report wording for filtered circle membership and reconstructed ego edges. App startup uses the same all-nodes check as the loader. Dependency verification is an explicit acceptance check for Python 3.13. Visualization HTML is fully self-contained. Build plan starts with a vertical slice.
 
-**Changes from v6:** Python requirement narrowed to 3.11.4+ because secure `tarfile` extraction filters are unavailable on earlier 3.11 patch releases. Extraction now records a marker containing the archive SHA-256, skips only when the marker matches, and safely re-extracts through a temporary directory when the archive changes or extraction is incomplete. Added extraction-marker acceptance tests.
+**Changes from v6:** Python requirement is pinned to the project's local Python 3.13 runtime, which provides the secure `tarfile` extraction filter. Extraction now records a marker containing the archive SHA-256, skips only when the marker matches, and safely re-extracts through a temporary directory when the archive changes or extraction is incomplete. Added extraction-marker acceptance tests.
 
 **Changes from v7:** Replaced the Claude Code wording with Codex/`AGENTS.md` instructions; made synthetic relationship timestamps bounded and reproducible; strengthened archive completeness and allowlist validation; added strict integration-test execution; guaranteed demo users have the required recommendation scenarios; aligned the Neo4j driver and server pins; clarified the assumed grading requirements, provenance, dataset limitations, Community Edition enforcement limits, bcrypt byte handling, report packaging, search behavior, test identifiers, and filename conventions.
 
@@ -159,7 +159,7 @@ data/raw/twitter/<egoId>.circles
 ```
 
 Rules:
-- The project requires Python **3.11.4 or newer**, which provides the `tarfile` extraction-filter argument. Extract with Python's `tarfile` using `filter="data"`, which blocks the dangerous link/path cases handled by that filter. Never shell out to `tar`.
+- The project requires Python **3.13.x**, which provides the `tarfile` extraction-filter argument. Extract with Python's `tarfile` using `filter="data"`, which blocks the dangerous link/path cases handled by that filter. Never shell out to `tar`.
 - Before extraction, inspect the archive member list. Allow only the expected top-level `twitter/` directory and files matching `<numeric-ego-id>.(edges|circles|feat|egofeat|featnames)`. Reject symlinks, hard links, device files, unexpected paths, duplicate member names, excessive member sizes, and unexpected file extensions.
 - After computing the archive hash, compare it with the exact contents of `data/raw/twitter/.archive_sha256`.
 - Skip extraction only when the marker exists, matches the current archive hash, and a validation pass confirms that the extracted file names and regular-file sizes exactly match the archive's expected member manifest. The existence of one or more `.edges` files alone is not sufficient to prove that extraction completed.
@@ -963,9 +963,9 @@ pytest==9.2.0
 | `pyvis` | UC-12 | |
 | `pytest` | tests | |
 
-Milestone 1 must verify this set in clean virtual environments on Python **3.11.4 and 3.13**, including imports, the seeded bcrypt hash, and a short Faker determinism check. Faker with seed 157 must produce the same names on both interpreters. The seeded password hash in 4.4 must verify with `checkpw` using encoded bytes.
+Milestone 1 must verify this set in a clean Python **3.13** virtual environment, including imports, the seeded bcrypt hash, and a short Faker determinism check. The seeded password hash in 4.4 must verify with `checkpw` using encoded bytes.
 
-Python **3.11.4 or newer** (tested on 3.11.4+ and 3.13). Neo4j **5.26.0** (pinned) required (queries use `COUNT { }`, `EXISTS { }`, and `CALL { }` subqueries).
+Python **3.13.x** is required. Neo4j **5.26.0** (pinned) required (queries use `COUNT { }`, `EXISTS { }`, and `CALL { }` subqueries).
 
 **Report tooling (system, required for packaging):** `pandoc` and a LaTeX engine are required for `make report` and `make zip`. Install notes go in the README (`brew install pandoc basictex` on macOS, `sudo apt install pandoc texlive-xetex` on Ubuntu). Mermaid diagrams are **pre-rendered to PNG and committed** in `report/diagrams/`, so no one needs `mmdc`. If the tools are unavailable, the README may describe manual PDF export, but `make zip` must fail clearly rather than producing a submission archive without `report.pdf`.
 

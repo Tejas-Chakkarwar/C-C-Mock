@@ -29,8 +29,8 @@ EXPECTED = {
 
 
 def main() -> int:
-    if sys.version_info < (3, 11, 4):
-        raise SystemExit("Python 3.11.4 or newer is required")
+    if sys.version_info[:2] != (3, 13):
+        raise SystemExit("Python 3.13.x is required for this project")
     for package, expected in EXPECTED.items():
         actual = importlib.metadata.version(package)
         if actual != expected:

@@ -1,4 +1,4 @@
-PYTHON ?= python3
+PYTHON ?= .venv/bin/python
 
 .PHONY: up down data load verify-env test test-integration slice-check
 
